@@ -169,10 +169,6 @@ class WordPress_Profiler {
 	 *
 	 */
 	private function save_report() {
-		$dir = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'profiler';
-		if ( ! @mkdir( $dir ) && ! @is_dir( $dir ) ) {
-			throw new \RuntimeException( sprintf( 'Directory "%s" was not created', $dir ) );
-		}
 		$time = time();
 		remove_all_filters( 'sanitize_key' );
 		$path = sanitize_key( $_SERVER['REQUEST_URI'] );
@@ -184,13 +180,17 @@ class WordPress_Profiler {
 
 		$this->sanitize_data();
 
-		file_put_contents( $dir . DIRECTORY_SEPARATOR . $filename, wp_json_encode( [
+		$data = wp_json_encode( [
 			'url'       => ! empty( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '/',
 			'timestamp' => $time,
 			'method'    => $_SERVER['REQUEST_METHOD'],
 			'referer'   => isset( $_SERVER['HTTP_REFERER'] ) ? $_SERVER['HTTP_REFERER'] : null,
 			'recording' => $this->data,
-		], JSON_PRETTY_PRINT ) );
+		], JSON_PRETTY_PRINT );
+
+		$this->do_save( $filename, $data );
+
+
 	}
 
 	/**
@@ -207,6 +207,14 @@ class WordPress_Profiler {
 		foreach ( $item['children'] as &$child ) {
 			$this->sanitize_data( $child );
 		}
+	}
+
+	private function do_save( $filename, $data ) {
+		$dir = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'profiler';
+		if ( ! @mkdir( $dir ) && ! @is_dir( $dir ) ) {
+			throw new \RuntimeException( sprintf( 'Directory "%s" was not created', $dir ) );
+		}
+		file_put_contents( $dir . DIRECTORY_SEPARATOR . $filename, $data );
 	}
 }
 
