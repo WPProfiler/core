@@ -30,14 +30,16 @@ class WordPress_Profiler {
 	public function init() {
 		add_action( 'all', [ $this, 'start_timer' ] );
 		add_action( 'shutdown', '__return_true', PHP_INT_MAX );
-		$this->data         = $this->record();
+		$this->data         = $this->record( true );
 		$this->current_hook = &$this->data;
 	}
 
 	/**
+	 * @param bool $root
+	 *
 	 * @return array
 	 */
-	private function record() {
+	private function record( $root = false ) {
 		$data = [];
 		if ( $this->current_hook ) {
 			$data['parent'] = &$this->current_hook;
@@ -53,6 +55,11 @@ class WordPress_Profiler {
 		$data['memory']       = null;
 		if ( $data['hook'] ) {
 			$data['functions'] = $this->get_current_functions();
+		}
+		$data['caller'] = null;
+		if ( ! $root ) {
+			$debug          = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 5 );
+			$data['caller'] = end( $debug );
 		}
 		$data['children'] = [];
 
