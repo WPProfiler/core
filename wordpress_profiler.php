@@ -11,6 +11,10 @@ namespace pcfreak30;
  */
 class WordPress_Profiler {
 	/**
+	 * Enable tracing of where a hook was called from
+	 */
+	const ENABLE_FUNCTION_TRACING = false;
+	/**
 	 * @var array
 	 */
 	private $data = [];
@@ -18,7 +22,6 @@ class WordPress_Profiler {
 	 * @var array
 	 */
 	private $current_hook = null;
-
 	/**
 	 * @var int
 	 */
@@ -56,10 +59,13 @@ class WordPress_Profiler {
 		if ( $data['hook'] ) {
 			$data['functions'] = $this->get_current_functions();
 		}
-		$data['caller'] = null;
-		if ( ! $root ) {
-			$debug          = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 5 );
-			$data['caller'] = end( $debug );
+
+		if ( self::ENABLE_FUNCTION_TRACING ) {
+			$data['caller'] = null;
+			if ( ! $root ) {
+				$debug          = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 5 );
+				$data['caller'] = end( $debug );
+			}
 		}
 		$data['children'] = [];
 
@@ -218,6 +224,10 @@ class WordPress_Profiler {
 		}
 	}
 
+	/**
+	 * @param $filename
+	 * @param $data
+	 */
 	private function do_save( $filename, $data ) {
 		$dir = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'profiler';
 		if ( ! @mkdir( $dir ) && ! @is_dir( $dir ) ) {
