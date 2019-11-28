@@ -175,7 +175,12 @@ class WordPress_Profiler {
 		}
 		$time = time();
 		remove_all_filters( 'sanitize_key' );
-		$filename = $this->current_hook ['time'] . '-' . sanitize_key( $_SERVER['REQUEST_URI'] ) . '-' . $_SERVER['REQUEST_METHOD'] . '-' . time() . '.json';
+		$path = sanitize_key( $_SERVER['REQUEST_URI'] );
+		if ( empty( $path ) ) {
+			$path = 'root';
+		}
+
+		$filename = $this->current_hook ['time'] . '-' . $path . '-' . $_SERVER['REQUEST_METHOD'] . '-' . time() . '.json';
 
 		$this->sanitize_data();
 
