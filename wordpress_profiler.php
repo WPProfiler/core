@@ -3,6 +3,9 @@
 namespace pcfreak30 {
 
 	use pcfreak30\WordPress_Profiler\Hook;
+	use ReflectionFunction;
+	use ReflectionMethod;
+	use RuntimeException;
 
 	/**
 	 * Class WordPress_Profiler
@@ -52,7 +55,7 @@ namespace pcfreak30 {
 			}
 
 			if ( $data['hook'] ) {
-				$data['functions'] = $this->get_current_functions();
+				$data['functions'] = [];
 			}
 
 			if ( self::ENABLE_FUNCTION_TRACING ) {
@@ -124,6 +127,8 @@ namespace pcfreak30 {
 
 			$this->maybe_inject_hook( $action );
 
+			$this->inject_function_timers( $action );
+
 			$this->current_hook['children'][] = $this->record();
 			$this->maybe_change_current_hook();
 
@@ -133,8 +138,14 @@ namespace pcfreak30 {
 
 		private function maybe_inject_hook( $action ) {
 			if ( ! ( $GLOBALS['wp_filter'][ $action ] instanceof Hook ) ) {
-				$GLOBALS['wp_filter'][ $action ] = new Hook( $GLOBALS['wp_filter'][ $action ] );
+				$GLOBALS['wp_filter'][ $action ] = new Hook( $GLOBALS['wp_filter'][ $action ], $action );
 			}
+		}
+
+		private function inject_function_timers( $action ) {
+			/** @var Hook $hook */
+			$hook = $GLOBALS['wp_filter'][ $action ];
+			$hook->maybe_inject_function_timer();
 		}
 
 		/**
@@ -263,43 +274,88 @@ namespace pcfreak30 {
 		public function get_current_hook() {
 			return $this->current_hook;
 		}
+
+		/**
+		 * @param $function
+		 *
+		 * @throws \ReflectionException
+		 */
+		public function start_function_timer( $function ) {
+			$function = $function['function'];
+			if ( is_array( $function ) && $function[0] === $this ) {
+				return;
+			}
+			$data = $this->create_timer_struct();
+			if ( is_array( $function ) ) {
+				$reflect = new ReflectionMethod( $function[0], $function[1] );
+				if ( is_object( $function[0] ) ) {
+					$function[0] = get_class( $function[0] );
+				}
+				$data ['file']     = $reflect->getFileName();
+				$data ['line']     = $reflect->getStartLine();
+				$data ['function'] = "{$function[0]}::$function[1]";
+			}
+			if ( is_string( $function ) || is_object( $function ) ) {
+				$reflect           = new ReflectionFunction( $function );
+				$data ['file']     = $reflect->getFileName();
+				$data ['line']     = $reflect->getStartLine();
+				$data ['function'] = $reflect->getName();
+			}
+			if ( empty( $data ['function'] ) ) {
+				$data ['function'] = 'UNKNOWN';
+			}
+			$this->current_hook['functions'][] = $data;
+		}
+
+		public function stop_function_timer() {
+			end( $this->current_hook['functions'] );
+			$function = &$this->current_hook['functions'][ key( $this->current_hook['functions'] ) ];
+			$this->record_stop( $function );
+		}
 	}
 }
 
 namespace pcfreak30\WordPress_Profiler {
+
+	use ArrayAccess;
+	use Iterator;
+	use WP_Hook;
 
 	/**
 	 * Class Hook
 	 *
 	 * @package pcfreak30
 	 */
-	class Hook {
+	class Hook implements Iterator, ArrayAccess {
+
+		private $injected = false;
+
 		/**
 		 * @var \WP_Hook
 		 */
 		private $hook;
+		/**
+		 * @var string
+		 */
+		private $hook_name;
+
+		private $start_cb;
+
+		private $stop_cb;
+
+		private $foreach_copy = false;
 
 		/**
 		 * WordPress_Profiler_Hook constructor.
 		 *
 		 * @param \WP_Hook $hook
 		 */
-		public function __construct( \WP_Hook $hook ) {
-			$this->hook = $hook;
-		}
-
-		/**
-		 * @param string $name
-		 * @param array  $arguments
-		 *
-		 * @return mixed
-		 */
-		public function __call( $name, $arguments ) {
-			if ( method_exists( $this, $name ) ) {
-				return call_user_func_array( [ $this, $name ], $arguments );
-			}
-
-			return call_user_func_array( [ $this->hook, $name ], $arguments );
+		public function __construct( WP_Hook $hook, $hook_name ) {
+			$this->hook         = $hook;
+			$this->hook_name    = $hook_name;
+			$this->start_cb     = [ $this, 'start_function_timer' ];
+			$this->stop_cb      = [ $this, 'stop_function_timer' ];
+			$this->foreach_copy = version_compare( PHP_VERSION, '5.6.0' ) >= 0;
 		}
 
 		/**
@@ -341,6 +397,256 @@ namespace pcfreak30\WordPress_Profiler {
 			return property_exists( $this->hook, $name );
 		}
 
+		/**
+		 * @inheritDoc
+		 */
+		public function next() {
+			return $this->__call( __FUNCTION__, [] );
+		}
+
+		/**
+		 * @param string $name
+		 * @param array  $arguments
+		 *
+		 * @return mixed
+		 */
+		public function __call( $name, $arguments ) {
+			if ( method_exists( $this, $name ) ) {
+				return call_user_func_array( [ $this, $name ], $arguments );
+			}
+
+			return call_user_func_array( [ $this->hook, $name ], $arguments );
+		}
+
+		/**
+		 * @inheritDoc
+		 */
+		public function key() {
+			return $this->__call( __FUNCTION__, [] );
+		}
+
+		/**
+		 * @inheritDoc
+		 */
+		public function valid() {
+			return $this->__call( __FUNCTION__, [] );
+		}
+
+		/**
+		 * @inheritDoc
+		 */
+		public function rewind() {
+			return $this->__call( __FUNCTION__, [] );
+		}
+
+		/**
+		 * @inheritDoc
+		 */
+		public function offsetExists( $offset ) {
+			return $this->__call( __FUNCTION__, [ $offset ] );
+		}
+
+		/**
+		 * @inheritDoc
+		 */
+		public function offsetGet( $offset ) {
+			return $this->__call( __FUNCTION__, [ $offset ] );
+		}
+
+		/**
+		 * @inheritDoc
+		 */
+		public function offsetSet( $offset, $value ) {
+			return $this->__call( __FUNCTION__, [ $offset, $value ] );
+		}
+
+		/**
+		 * @inheritDoc
+		 */
+		public function offsetUnset( $offset ) {
+			return $this->__call( __FUNCTION__, [ $offset ] );
+		}
+
+		/**
+		 * @return bool
+		 */
+		public function is_injected() {
+			return $this->injected;
+		}
+
+		/**
+		 * @param bool $injected
+		 */
+		public function set_injected( $injected ) {
+			$this->injected = $injected;
+		}
+
+		public function maybe_inject_function_timer() {
+			if ( $this->injected ) {
+				return;
+			}
+			$this->inject_function_timer();
+			$this->injected = true;
+		}
+
+		public function inject_function_timer( $priority = null ) {
+			if ( null === $priority ) {
+				$priority = array_keys( $this->hook->callbacks );
+			}
+
+			if ( null !== $priority ) {
+				$priority = (array) $priority;
+			}
+
+			$start_wrapper = $this->get_start_cb_wrapper();
+			$stop_wrapper  = $this->get_stop_cb_wrapper();
+
+			foreach ( $priority as $hook_priority ) {
+				$new_callbacks = [];
+
+				foreach ( $this->hook->callbacks[ $hook_priority ] as $function ) {
+					$start_id    = _wp_filter_build_unique_id( $this->hook_name, $this->start_cb, $hook_priority );
+					$stop_id     = _wp_filter_build_unique_id( $this->hook_name, $this->stop_cb, $hook_priority );
+					$function_id = _wp_filter_build_unique_id( $this->hook_name, $function['function'], $hook_priority );
+					$this->append_array_unique( $new_callbacks, $start_id, $start_wrapper );
+					$new_callbacks[ $function_id ] = $function;
+					$this->append_array_unique( $new_callbacks, $stop_id, $stop_wrapper );
+				}
+				$this->hook->callbacks[ $hook_priority ] = $new_callbacks;
+			}
+		}
+
+		private function get_start_cb_wrapper() {
+			return $this->get_cb_wrapper( $this->start_cb );
+		}
+
+		private function get_cb_wrapper( $cb ) {
+			return [ 'function' => $cb, 'accepted_args' => 1 ];
+		}
+
+		private function get_stop_cb_wrapper() {
+			return $this->get_cb_wrapper( $this->stop_cb );
+		}
+
+		private function append_array_unique( &$array, $key, $value ) {
+			while ( isset( $array[ $key ] ) ) {
+				$key .= '_0';
+			}
+			$array[ $key ] = $value;
+
+			return $key;
+		}
+
+		/**
+		 * @param mixed|null $value
+		 *
+		 * @throws \ReflectionException
+		 * @noinspection PhpUnused
+		 */
+		public function start_function_timer( $value = null ) {
+			profiler()->start_function_timer( $this->advance_hook() );
+
+			return $value;
+		}
+
+		private function advance_hook( $end = false ) {
+			$hook = &$this->hook->callbacks[ $this->hook->current_priority() ];
+			if ( $this->foreach_copy ) {
+				$pointer = next( $hook );
+				if ( $end ) {
+					$pointer = next( $hook );
+				}
+				if ( ! $pointer ) {
+					$pointer = reset( $hook );
+				}
+			}
+
+			return $pointer ?: current( $hook );
+		}
+
+		/**
+		 * @inheritDoc
+		 */
+		public function current() {
+			return $this->__call( __FUNCTION__, [] );
+		}
+
+		/**
+		 * @param null $value
+		 *
+		 * @return mixed|null
+		 * @noinspection PhpUnused
+		 */
+		public function stop_function_timer( $value = null ) {
+			$this->advance_hook( true );
+			profiler()->stop_function_timer();
+
+			return $value;
+		}
+
+		public function add_filter( $tag, $function_to_add, $priority, $accepted_args ) {
+			$start_id         = _wp_filter_build_unique_id( $this->hook_name, $this->start_cb, $priority );
+			$stop_id          = _wp_filter_build_unique_id( $this->hook_name, $this->stop_cb, $priority );
+			$profiler_stop_id = _wp_filter_build_unique_id( $this->hook_name, [ profiler(), 'stop_timer' ], $priority );
+			$function_id      = _wp_filter_build_unique_id( $this->hook_name, $function_to_add, $priority );
+
+			if ( in_array( $function_id, [ $start_id, $stop_id, $profiler_stop_id ] ) ) {
+				return $this->hook->add_filter( $tag, $function_to_add, $priority, $accepted_args );
+			}
+
+			$callbacks = &$this->hook->callbacks[ $priority ];
+
+			$this->hook->add_filter( $tag, $function_to_add, $priority, $accepted_args );
+			$this->append_array_unique( $callbacks, $stop_id, $this->get_stop_cb_wrapper() );
+
+			return true;
+		}
+
+		public function remove_filter( $tag, $function_to_remove, $priority ) {
+			$function_id      = _wp_filter_build_unique_id( $this->hook_name, $function_to_remove, $priority );
+			$profiler_stop_id = _wp_filter_build_unique_id( $this->hook_name, [ profiler(), 'stop_timer' ], $priority );
+			if ( $function_id == $profiler_stop_id ) {
+				return $this->hook->remove_filter( $tag, $function_to_remove, $priority );
+			}
+			if ( $this->hook->has_filter( $tag, $function_to_remove ) ) {
+				$callbacks = &$this->hook->callbacks[ $priority ];
+				$current   = key( $callbacks );
+
+				$keys          = array_keys( $callbacks );
+				$indexes       = array_flip( $keys );
+				$current_index = $indexes[ $current ];
+
+				$function_key       = _wp_filter_build_unique_id( $tag, $function_to_remove, $priority );
+				$function_index     = $indexes[ $function_key ];
+				$start_function_key = $keys[ $function_index - 1 ];
+				$stop_function_key  = $keys[ $function_index + 1 ];
+
+				$this->hook->remove_filter( $tag, $function_to_remove, $priority );
+				unset( $callbacks[ $start_function_key ] );
+				unset( $callbacks[ $stop_function_key ] );
+
+				if ( $function_index < $current_index ) {
+					reset( $callbacks );
+					do {
+						next( $callbacks );
+					} while ( $indexes[ key( $callbacks ) ] < $function_index );
+				}
+
+				return true;
+			}
+
+			return false;
+		}
+
+		public function remove_function_hooks() {
+			$callbacks = &$this->hook->callbacks;
+
+			foreach ( array_keys( $callbacks ) as $priority ) {
+				$callbacks[ $priority ] = array_filter( $callbacks[ $priority ], function ( $function ) {
+					return ! ( is_array( $function['function'] ) && $function['function'][0] instanceof self );
+				} );
+			}
+		}
 	}
 }
 
