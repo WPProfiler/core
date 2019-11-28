@@ -91,32 +91,6 @@ namespace pcfreak30 {
 		}
 
 		/**
-		 * @return array
-		 */
-		private function get_current_functions() {
-			$functions = $GLOBALS['wp_filter'][ current_action() ]->callbacks;
-			$functions = call_user_func_array( 'array_merge', $functions );
-			$functions = array_map( function ( $item ) {
-				return $item['function'];
-			}, $functions );
-
-			return array_values( array_map( function ( $item ) {
-				if ( is_object( $item ) ) {
-					$item = [ $item, '' ];
-				}
-				if ( is_array( $item ) ) {
-					if ( is_object( $item[0] ) ) {
-						$item[0] = get_class( $item[0] );
-					}
-
-					return "{$item[0]}::{$item[1]}";
-				}
-
-				return $item;
-			}, $functions ) );
-		}
-
-		/**
 		 *
 		 */
 		public function start_timer() {
