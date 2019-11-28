@@ -153,7 +153,7 @@ class WordPress_Profiler {
 	private function record_end() {
 		$count  = array_count_values( $GLOBALS['wp_current_filter'] );
 		$action = current_action();
-		if ( 1 === count( $count[ $action ] ) ) {
+		if ( 1 === $count[ $action ] ) {
 			remove_action( $action, [ $this, 'stop_timer' ], PHP_INT_MAX );
 		}
 		$this->current_hook ['stop'] = $this->time();
