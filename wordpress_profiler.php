@@ -643,3 +643,7 @@ namespace pcfreak30\WordPress_Profiler {
 		return $instance;
 	}
 }
+
+namespace {
+	pcfreak30\WordPress_Profiler\profiler();
+}
