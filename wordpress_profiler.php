@@ -184,8 +184,8 @@ class WordPress_Profiler {
 	 */
 	private function save_report() {
 		$time = time();
-		remove_all_filters( 'sanitize_key' );
-		$path = sanitize_key( $_SERVER['REQUEST_URI'] );
+		remove_action( 'all', [ $this, 'start_timer' ] );
+		$path = sanitize_title( $_SERVER['REQUEST_URI'] );
 		if ( empty( $path ) ) {
 			$path = 'root';
 		}
