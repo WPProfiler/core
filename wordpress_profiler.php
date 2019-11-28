@@ -45,19 +45,12 @@ namespace pcfreak30 {
 		 * @return array
 		 */
 		private function record( $root = false ) {
-			$data = [];
+			$data = $this->create_timer_struct();
+			$data = [ 'hook' => current_action() ] + $data;
 			if ( $this->current_hook ) {
 				$data['parent'] = &$this->current_hook;
 			}
 
-			$data['hook']         = current_action();
-			$data['start']        = $this->time();
-			$data['stop']         = null;
-			$data['time']         = null;
-			$data['human_time']   = null;
-			$data['memory_start'] = memory_get_usage();
-			$data['memory_stop']  = null;
-			$data['memory']       = null;
 			if ( $data['hook'] ) {
 				$data['functions'] = $this->get_current_functions();
 			}
@@ -70,6 +63,19 @@ namespace pcfreak30 {
 				}
 			}
 			$data['children'] = [];
+
+			return $data;
+		}
+
+		private function create_timer_struct() {
+			$data                 = [];
+			$data['start']        = $this->time();
+			$data['stop']         = null;
+			$data['time']         = null;
+			$data['human_time']   = null;
+			$data['memory_start'] = memory_get_usage();
+			$data['memory_stop']  = null;
+			$data['memory']       = null;
 
 			return $data;
 		}
@@ -183,10 +189,15 @@ namespace pcfreak30 {
 			if ( 1 === $count[ $action ] ) {
 				remove_action( $action, [ $this, 'stop_timer' ], PHP_INT_MAX );
 			}
-			$this->current_hook ['stop']        = $this->time();
-			$this->current_hook ['memory_stop'] = memory_get_usage();
-			$this->current_hook ['time']        = $this->current_hook ['stop'] - $this->current_hook ['start'];
-			$this->current_hook ['memory']      = $this->current_hook ['memory_stop'] - $this->current_hook ['memory_start'];
+			$this->record_stop( $this->current_hook );
+		}
+
+		private function record_stop( &$item ) {
+			$item ['stop']        = $this->time();
+			$item ['memory_stop'] = memory_get_usage();
+			$item ['time']        = $item['stop'] - $item['start'];
+			$item ['memory']      = $item ['memory_stop'] - $item ['memory_start'];
+			$item['human_time']   = sprintf( '%f', $item['time'] );
 		}
 
 		/**
@@ -227,7 +238,6 @@ namespace pcfreak30 {
 			if ( isset( $item['parent'] ) ) {
 				unset( $item['parent'] );
 			}
-			$item['human_time'] = sprintf( '%f', $item['time'] );
 
 			foreach ( $item['children'] as &$child ) {
 				$this->sanitize_data( $child );
@@ -241,7 +251,7 @@ namespace pcfreak30 {
 		private function do_save( $filename, $data ) {
 			$dir = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'profiler';
 			if ( ! @mkdir( $dir ) && ! @is_dir( $dir ) ) {
-				throw new \RuntimeException( sprintf( 'Directory "%s" was not created', $dir ) );
+				throw new RuntimeException( sprintf( 'Directory "%s" was not created', $dir ) );
 			}
 			file_put_contents( $dir . DIRECTORY_SEPARATOR . $filename, $data );
 		}
