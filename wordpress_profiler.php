@@ -45,7 +45,6 @@ class WordPress_Profiler {
 
 		$data['hook']         = current_action();
 		$data['start']        = $this->time();
-		$data['children']     = [];
 		$data['stop']         = null;
 		$data['time']         = null;
 		$data['memory_start'] = memory_get_usage();
@@ -54,6 +53,7 @@ class WordPress_Profiler {
 		if ( $data['hook'] ) {
 			$data['functions'] = $this->get_current_functions();
 		}
+		$data['children'] = [];
 
 		return $data;
 	}
