@@ -216,6 +216,7 @@ namespace pcfreak30 {
 			$this->sanitize_data();
 
 			$data = wp_json_encode( [
+				'server'    => $_SERVER['HTTP_HOST'],
 				'url'       => ! empty( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '/',
 				'timestamp' => $time,
 				'method'    => $_SERVER['REQUEST_METHOD'],
