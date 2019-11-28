@@ -191,6 +191,10 @@ namespace pcfreak30 {
 		private function save_report() {
 			$time = time();
 			remove_action( 'all', [ $this, 'start_timer' ] );
+			/** @var Hook $sanitize_title */
+			$sanitize_title = $GLOBALS['wp_filter']['sanitize_title'];
+			$sanitize_title->remove_function_hooks();
+
 			$path = sanitize_title( $_SERVER['REQUEST_URI'] );
 			if ( empty( $path ) ) {
 				$path = 'root';
