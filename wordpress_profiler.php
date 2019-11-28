@@ -47,6 +47,7 @@ class WordPress_Profiler {
 		$data['start']        = $this->time();
 		$data['stop']         = null;
 		$data['time']         = null;
+		$data['human_time']   = null;
 		$data['memory_start'] = memory_get_usage();
 		$data['memory_stop']  = null;
 		$data['memory']       = null;
@@ -203,6 +204,7 @@ class WordPress_Profiler {
 		if ( isset( $item['parent'] ) ) {
 			unset( $item['parent'] );
 		}
+		$item['human_time'] = sprintf( '%f', $item['time'] );
 
 		foreach ( $item['children'] as &$child ) {
 			$this->sanitize_data( $child );
