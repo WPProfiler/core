@@ -185,7 +185,7 @@ class WordPress_Profiler {
 		$this->sanitize_data();
 
 		file_put_contents( $dir . DIRECTORY_SEPARATOR . $filename, wp_json_encode( [
-			'url'       => $_SERVER['REQUEST_URI'],
+			'url'       => ! empty( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '/',
 			'timestamp' => $time,
 			'method'    => $_SERVER['REQUEST_METHOD'],
 			'referer'   => isset( $_SERVER['HTTP_REFERER'] ) ? $_SERVER['HTTP_REFERER'] : null,
