@@ -43,11 +43,14 @@ class WordPress_Profiler {
 			$data['parent'] = &$this->current_hook;
 		}
 
-		$data['hook']     = current_action();
-		$data['start']    = $this->time();
-		$data['children'] = [];
-		$data['stop']     = null;
-		$data['time']     = null;
+		$data['hook']         = current_action();
+		$data['start']        = $this->time();
+		$data['children']     = [];
+		$data['stop']         = null;
+		$data['time']         = null;
+		$data['memory_start'] = memory_get_usage();
+		$data['memory_stop']  = null;
+		$data['memory']       = null;
 		if ( $data['hook'] ) {
 			$data['functions'] = $this->get_current_functions();
 		}
@@ -156,8 +159,10 @@ class WordPress_Profiler {
 		if ( 1 === $count[ $action ] ) {
 			remove_action( $action, [ $this, 'stop_timer' ], PHP_INT_MAX );
 		}
-		$this->current_hook ['stop'] = $this->time();
-		$this->current_hook ['time'] = $this->current_hook ['stop'] - $this->current_hook ['start'];
+		$this->current_hook ['stop']        = $this->time();
+		$this->current_hook ['memory_stop'] = memory_get_usage();
+		$this->current_hook ['time']        = $this->current_hook ['stop'] - $this->current_hook ['start'];
+		$this->current_hook ['memory']      = $this->current_hook ['memory_stop'] - $this->current_hook ['memory_start'];
 	}
 
 	/**
