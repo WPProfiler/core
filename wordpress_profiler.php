@@ -317,7 +317,7 @@ namespace pcfreak30 {
 		 * @param bool $function_tracing
 		 */
 		public function set_function_tracing( $function_tracing ) {
-			$this->function_tracing = $function_tracing;
+			$this->function_tracing = (bool) $function_tracing;
 		}
 
 		/**
