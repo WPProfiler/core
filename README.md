@@ -31,23 +31,32 @@ Function tracing for hooks is off by default due to the possible performance hit
 Here is sample of a recorded object for a single hook
 
 ```json
-            {
-                "hook": "option_siteurl",
-                "start": 1574938537.390849,
-                "stop": 1574938537.390964,
-                "time": 0.00011491775512695312,
-                "human_time": "0.000115",
-                "memory_start": 2315792,
-                "memory_stop": 2319320,
-                "memory": 3528,
-                "functions": [
-                    "_config_wp_siteurl"
-                ],
-                "caller": {
-                    "file": "\/var\/www\/html\/wp-includes\/option.php",
-                    "line": 152,
-                    "function": "apply_filters"
-                },
-                "children": []
-            }
+{
+    "hook": "option_siteurl",
+    "start": 1574984682.006578,
+    "stop": 1574984682.007091,
+    "time": 0.0005130767822265625,
+    "human_time": "0.000513",
+    "memory_start": 2761664,
+    "memory_stop": 2767440,
+    "memory": 5776,
+    "functions": [{
+        "start": 1574984682.006713,
+        "stop": 1574984682.006982,
+        "time": 0.00026917457580566406,
+        "human_time": "0.000269",
+        "memory_start": 2766328,
+        "memory_stop": 2767072,
+        "memory": 744,
+        "file": "\/var\/www\/html\/wp-includes\/functions.php",
+        "line": 4017,
+        "function": "_config_wp_siteurl"
+    }],
+    "caller": {
+        "file": "\/var\/www\/html\/wp-includes\/option.php",
+        "line": 152,
+        "function": "apply_filters"
+    },
+    "children": []
+}
 ```
