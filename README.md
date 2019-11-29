@@ -63,15 +63,20 @@ Here is sample of a recorded object for a single hook
 
 # Use a custom report handler
 
-The profiler supports setting a custom handler for the report data via `set_report_handler` method. This takes a PHP `callable` with the signature of `function ( $filename, $data )`. `$filename` is a `string` and `$data` is an `array`.
+The profiler supports setting a custom handler for the report data via `set_report_handler` method. This requires a class implement against the `ReporterInterface` interface.
 
 ### Example custom report handler
 
 ```php
-function my_report_handler( $filename, $data ) {
-	wp_remote_post( 'https://myreport.server', [ 'body' => [ 'filename' => $filename, 'data' => $data ] ] );
-    }
+use pcfreak30\WordPress_Profiler\ReporterInterface;
+use function pcfreak30\WordPress_Profiler\profiler;
 
-\pcfreak30\WordPress_Profiler\profiler()->set_report_handler( 'my_report_handler' );
+class MyCustomReporter implements ReporterInterface {
+	public function execute( $filename, array $data ) {
+		wp_remote_post( 'https://myreport.server', [ 'body' => [ 'filename' => $filename, 'data' => $data ] ] );
+	}
+}
+
+profiler()->set_report_handler( new MyCustomReporter() );
 ```
  
