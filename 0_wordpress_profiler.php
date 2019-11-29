@@ -285,7 +285,6 @@ namespace pcfreak30 {
 			if ( defined( 'SAVEQUERIES' ) && SAVEQUERIES ) {
 				$this->add_meta( 'db', $GLOBALS['wpdb']->queries );
 			}
-
 		}
 
 		/**
