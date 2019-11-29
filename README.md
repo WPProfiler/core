@@ -26,40 +26,10 @@ A drop-in hook profiler (actions/filters) for WordPress in the form of a MU (Mus
 Function tracing for hooks is off by default due to the possible performance hit of using `debug_backtrace()`. If you wish to use it, call `profiler()->set_function_tracing(true)`.
 
 
-# Example hook recording
+# Example hook report
 
-Here is sample of a recorded object for a single hook
+Here is sample of a report generated from this plugin. [example.json](example.json)
 
-```json
-{
-    "hook": "option_siteurl",
-    "start": 1574984682.006578,
-    "stop": 1574984682.007091,
-    "time": 0.0005130767822265625,
-    "human_time": "0.000513",
-    "memory_start": 2761664,
-    "memory_stop": 2767440,
-    "memory": 5776,
-    "functions": [{
-        "start": 1574984682.006713,
-        "stop": 1574984682.006982,
-        "time": 0.00026917457580566406,
-        "human_time": "0.000269",
-        "memory_start": 2766328,
-        "memory_stop": 2767072,
-        "memory": 744,
-        "file": "\/var\/www\/html\/wp-includes\/functions.php",
-        "line": 4017,
-        "function": "_config_wp_siteurl"
-    }],
-    "caller": {
-        "file": "\/var\/www\/html\/wp-includes\/option.php",
-        "line": 152,
-        "function": "apply_filters"
-    },
-    "children": []
-}
-```
 
 # Use a custom report handler
 
