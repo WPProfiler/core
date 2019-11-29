@@ -269,7 +269,7 @@ namespace pcfreak30 {
 			$query   = $GLOBALS['wp_the_query'];
 			$methods = get_class_methods( $query );
 			$methods = array_filter( $methods, function ( $method ) {
-				return 0 === strpos( $method, 'is_' );
+				return 0 === strpos( $method, 'is_' ) && ! in_array( $method, [ 'is_comments_popup' ] );
 			} );
 			$meta    = [];
 			foreach ( $methods as $method ) {
