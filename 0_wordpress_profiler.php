@@ -375,6 +375,7 @@ namespace pcfreak30 {
 		 */
 		public function set_disabled() {
 			$this->disabled = true;
+			$this->record_stop( $this->data );
 		}
 
 		/**
