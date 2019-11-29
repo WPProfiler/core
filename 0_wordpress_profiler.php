@@ -263,19 +263,6 @@ namespace pcfreak30 {
 		}
 
 		/**
-		 * @param array $item
-		 */
-		private function sanitize_data( array &$item ) {
-			if ( isset( $item['parent'] ) ) {
-				unset( $item['parent'] );
-			}
-
-			foreach ( $item['children'] as &$child ) {
-				$this->sanitize_data( $child );
-			}
-		}
-
-		/**
 		 *
 		 */
 		private function add_default_meta() {
@@ -300,6 +287,19 @@ namespace pcfreak30 {
 				'recording' => $this->data,
 				'meta'      => $this->meta,
 			];
+		}
+
+		/**
+		 * @param array $item
+		 */
+		private function sanitize_data( array &$item ) {
+			if ( isset( $item['parent'] ) ) {
+				unset( $item['parent'] );
+			}
+
+			foreach ( $item['children'] as &$child ) {
+				$this->sanitize_data( $child );
+			}
 		}
 
 		/**
@@ -916,5 +916,17 @@ namespace pcfreak30\WordPress_Profiler {
 }
 
 namespace {
+
+	use function pcfreak30\WordPress_Profiler\profiler;
+
+	if ( ! function_exists( 'wp_profiler' ) ) {
+
+		function wp_profiler() {
+			return profiler();
+		}
+
+	}
+
 	pcfreak30\WordPress_Profiler\profiler();
+
 }
