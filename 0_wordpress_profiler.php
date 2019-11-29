@@ -43,6 +43,11 @@ namespace pcfreak30 {
 		private $report_handler;
 
 		/**
+		 * @var bool
+		 */
+		private $disabled = false;
+
+		/**
 		 *
 		 */
 		public function init() {
@@ -108,6 +113,10 @@ namespace pcfreak30 {
 		 *
 		 */
 		public function start_timer() {
+			if ( $this->disabled ) {
+				return;
+			}
+
 			$action = current_action();
 			if ( ! has_action( $action ) ) {
 				return;
@@ -177,9 +186,14 @@ namespace pcfreak30 {
 		 * @return null
 		 */
 		public function stop_timer( $data = null ) {
+			$action   = current_action();
+			$shutdown = 'shutdown' === $action;
+			if ( $this->disabled && ! $shutdown ) {
+				return $data;
+			}
 			$this->record_end();
 			$this->maybe_change_current_hook();
-			if ( 'shutdown' === current_action() ) {
+			if ( $shutdown ) {
 				$this->record_end();
 				$this->save_report();
 			}
@@ -273,6 +287,10 @@ namespace pcfreak30 {
 		 * @throws \ReflectionException
 		 */
 		public function start_function_timer( $function ) {
+			if ( $this->disabled ) {
+				return;
+			}
+
 			$function = $function['function'];
 			if ( is_array( $function ) && $function[0] === $this ) {
 				return;
@@ -303,6 +321,9 @@ namespace pcfreak30 {
 		 *
 		 */
 		public function stop_function_timer() {
+			if ( $this->disabled ) {
+				return;
+			}
 			end( $this->current_hook['functions'] );
 			$function = &$this->current_hook['functions'][ key( $this->current_hook['functions'] ) ];
 			$this->record_stop( $function );
@@ -330,6 +351,20 @@ namespace pcfreak30 {
 		 */
 		public function set_report_handler( ReporterInterface $report_handler ) {
 			$this->report_handler = $report_handler;
+		}
+
+		/**
+		 * @return bool
+		 */
+		public function is_disabled() {
+			return $this->disabled;
+		}
+
+		/**
+		 *
+		 */
+		public function set_disabled() {
+			$this->disabled = true;
 		}
 	}
 }
