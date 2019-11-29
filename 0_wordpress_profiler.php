@@ -266,7 +266,24 @@ namespace pcfreak30 {
 		 *
 		 */
 		private function add_default_meta() {
+			$query   = $GLOBALS['wp_the_query'];
+			$methods = get_class_methods( $query );
+			$methods = array_filter( $methods, function ( $method ) {
+				return 0 === strpos( $method, 'is_' );
+			} );
+			$meta    = [];
+			foreach ( $methods as $method ) {
+				$meta[ $method ] = $query->{$method}();
+			}
+			$this->add_meta( 'query', $meta );
+		}
 
+		/**
+		 * @param string $key
+		 * @param array  $value
+		 */
+		public function add_meta( $key, $value ) {
+			$this->meta[ $key ] = $value;
 		}
 
 		public function generate_report() {
@@ -409,14 +426,6 @@ namespace pcfreak30 {
 		 */
 		public function set_reporting( $reporting ) {
 			$this->reporting = (bool) $reporting;
-		}
-
-		/**
-		 * @param string $key
-		 * @param string $value
-		 */
-		public function add_meta( $key, $value ) {
-			$this->meta[ $key ] = $value;
 		}
 
 		/**
