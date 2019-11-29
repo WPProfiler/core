@@ -33,6 +33,11 @@ namespace pcfreak30 {
 		private $level = 0;
 
 		/**
+		 * @var bool
+		 */
+		private $function_tracing = false;
+
+		/**
 		 *
 		 */
 		public function init() {
@@ -58,7 +63,7 @@ namespace pcfreak30 {
 				$data['functions'] = [];
 			}
 
-			if ( self::ENABLE_FUNCTION_TRACING ) {
+			if ( $this->function_tracing ) {
 				$data['caller'] = null;
 				if ( ! $root ) {
 					$debug          = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 5 );
@@ -289,6 +294,13 @@ namespace pcfreak30 {
 			end( $this->current_hook['functions'] );
 			$function = &$this->current_hook['functions'][ key( $this->current_hook['functions'] ) ];
 			$this->record_stop( $function );
+		}
+
+		/**
+		 * @param bool $function_tracing
+		 */
+		public function set_function_tracing( $function_tracing ) {
+			$this->function_tracing = $function_tracing;
 		}
 	}
 }
