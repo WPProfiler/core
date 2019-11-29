@@ -69,7 +69,7 @@ The profiler supports setting a custom handler for the report data via `set_repo
 
 ```php
 function my_report_handler( $filename, $data ) {
-	wp_remote_post( 'https://myreport.server', [ 'body' => [ 'filename' => $filename, 'data' => $data ] ] )
+	wp_remote_post( 'https://myreport.server', [ 'body' => [ 'filename' => $filename, 'data' => $data ] ] );
     }
 
 \pcfreak30\WordPress_Profiler\profiler()->set_report_handler( 'my_report_handler' );
