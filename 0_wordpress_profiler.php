@@ -1,18 +1,15 @@
 <?php
 
-namespace pcfreak30 {
-
-	use pcfreak30\WordPress_Profiler\CollectorInterface;
-	use pcfreak30\WordPress_Profiler\ReporterInterface;
+namespace WPProfiler\Core {
 
 	/**
-	 * Class WordPress_Profiler
+	 * Class Core
 	 *
-	 * @package pcfreak30
+	 * @package WPProfiler
 	 * @author  Derrick Hammer
 	 * @version 0.1.0
 	 */
-	class WordPress_Profiler {
+	class Profiler {
 
 		/**
 		 * Add version identifier
@@ -20,7 +17,7 @@ namespace pcfreak30 {
 		const VERSION = '0.1.0';
 
 		/**
-		 * @var \pcfreak30\WordPress_Profiler\ReporterInterface
+		 * @var \WPProfiler\Core\ReporterInterface
 		 */
 		private $report_handler;
 
@@ -75,7 +72,7 @@ namespace pcfreak30 {
 		}
 
 		/**
-		 * @return \pcfreak30\WordPress_Profiler\ReporterInterface
+		 * @return \WPProfiler\Core\ReporterInterface
 		 * @noinspection PhpUnused
 		 */
 		public function get_report_handler() {
@@ -83,7 +80,7 @@ namespace pcfreak30 {
 		}
 
 		/**
-		 * @param \pcfreak30\WordPress_Profiler\ReporterInterface $report_handler
+		 * @param \WPProfiler\Core\ReporterInterface $report_handler
 		 */
 		public function set_report_handler( ReporterInterface $report_handler ) {
 			$this->report_handler = $report_handler;
@@ -116,7 +113,7 @@ namespace pcfreak30 {
 
 		/**
 		 * @param                                                  $name
-		 * @param \pcfreak30\WordPress_Profiler\CollectorInterface $collector
+		 * @param \WPProfiler\Core\CollectorInterface              $collector
 		 */
 		public function register_collector( $name, CollectorInterface $collector ) {
 			$this->collectors[ $name ] = $collector;
@@ -262,19 +259,18 @@ namespace pcfreak30 {
 	}
 }
 
-namespace pcfreak30\WordPress_Profiler {
+namespace WPProfiler\Core {
 
 	use ArrayAccess;
 	use Iterator;
-	use pcfreak30\WordPress_Profiler;
-	use pcfreak30\WordPress_Profiler\Collectors\Function_;
 	use RuntimeException;
 	use WP_Hook;
+	use WPProfiler\Core\Collectors\Function_;
 
 	/**
 	 * Interface ReporterInterface
 	 *
-	 * @package pcfreak30\WordPress_Profiler
+	 * @package WPProfiler\Core
 	 */
 	interface ReporterInterface {
 		/**
@@ -289,16 +285,16 @@ namespace pcfreak30\WordPress_Profiler {
 	/**
 	 * Interface CollectorInterface
 	 *
-	 * @package pcfreak30\WordPress_Profiler
+	 * @package WPProfiler\Core
 	 */
 	interface CollectorInterface {
 
 		/**
 		 * CollectorInterface constructor.
 		 *
-		 * @param \pcfreak30\WordPress_Profiler $profiler
+		 * @param \WPProfiler\Profiler $profiler
 		 */
-		public function __construct( WordPress_Profiler $profiler );
+		public function __construct( Profiler $profiler );
 
 		/**
 		 * @return mixed
@@ -336,7 +332,7 @@ namespace pcfreak30\WordPress_Profiler {
 	/**
 	 * Class CollectorAbstract
 	 *
-	 * @package pcfreak30\WordPress_Profiler
+	 * @package WPProfiler\Core
 	 */
 	abstract class CollectorAbstract implements CollectorInterface {
 		/**
@@ -350,16 +346,16 @@ namespace pcfreak30\WordPress_Profiler {
 		const BUILD_FILENAME_PRIORITY = 0;
 
 		/**
-		 * @var WordPress_Profiler
+		 * @var Profiler
 		 */
 		protected $profiler;
 
 		/**
 		 * CollectorAbstract constructor.
 		 *
-		 * @param \pcfreak30\WordPress_Profiler $profiler
+		 * @param \WPProfiler\Profiler $profiler
 		 */
-		public function __construct( WordPress_Profiler $profiler ) {
+		public function __construct( Profiler $profiler ) {
 			$this->profiler = $profiler;
 		}
 
@@ -395,7 +391,7 @@ namespace pcfreak30\WordPress_Profiler {
 	/**
 	 * Class FileSystemReporter
 	 *
-	 * @package pcfreak30\WordPress_Profiler
+	 * @package WPProfiler\Core
 	 */
 	class FileSystemReporter implements ReporterInterface {
 		/** @noinspection PhpUnused */
@@ -411,7 +407,7 @@ namespace pcfreak30\WordPress_Profiler {
 	/**
 	 * Class Hook
 	 *
-	 * @package pcfreak30
+	 * @package WPProfiler
 	 */
 	class Hook implements Iterator, ArrayAccess {
 
@@ -444,27 +440,27 @@ namespace pcfreak30\WordPress_Profiler {
 		 */
 		private $foreach_copy;
 		/**
-		 * @var WordPress_Profiler
+		 * @var Profiler
 		 */
 		private $profiler;
 		/**
-		 * @var \pcfreak30\WordPress_Profiler\Collectors\Function_
+		 * @var \WPProfiler\Core\Collectors\Function_
 		 */
 		private $collector;
 
 		/**
-		 * WordPress_Profiler_Hook constructor.
+		 * Hook constructor.
 		 *
 		 * @param \WP_Hook                                         $hook
 		 * @param                                                  $hook_name
 		 *
-		 * @param WordPress_Profiler                               $profiler
+		 * @param Profiler                                         $profiler
 		 *
 		 * @param                                                  $collector
 		 *
 		 * @noinspection PhpUnused
 		 */
-		public function __construct( WP_Hook $hook, $hook_name, WordPress_Profiler $profiler, Function_ $collector ) {
+		public function __construct( WP_Hook $hook, $hook_name, Profiler $profiler, Function_ $collector ) {
 			$this->hook         = $hook;
 			$this->hook_name    = $hook_name;
 			$this->start_cb     = [ $this, 'start_function_timer' ];
@@ -835,18 +831,18 @@ namespace pcfreak30\WordPress_Profiler {
 	}
 }
 
-namespace pcfreak30\WordPress_Profiler\Collectors {
+namespace WPProfiler\Core\Collectors {
 
-	use pcfreak30\WordPress_Profiler;
 	use ReflectionFunction;
 	use ReflectionMethod;
+	use WPProfiler\Core;
 
 	/**
 	 * Class Hook
 	 *
-	 * @package pcfreak30\WordPress_Profiler\Collectors
+	 * @package WPProfiler\Core\Collectors
 	 */
-	class Hook extends WordPress_Profiler\CollectorAbstract {
+	class Hook extends Core\CollectorAbstract {
 
 		/**
 		 *
@@ -1067,9 +1063,9 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 	/**
 	 * Class Function_
 	 *
-	 * @package pcfreak30\WordPress_Profiler\Collectors
+	 * @package WPProfiler\Core\Collectors
 	 */
-	class Function_ extends WordPress_Profiler\CollectorAbstract {
+	class Function_ extends Core\CollectorAbstract {
 		/**
 		 *
 		 */
@@ -1149,9 +1145,9 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 		 * @return array
 		 */
 		public function build_report_filename( $parts ) {
-			/** @var \pcfreak30\WordPress_Profiler\Hook $sanitize_title */
+			/** @var \WPProfiler\Core\Hook $sanitize_title */
 			$sanitize_title = $GLOBALS['wp_filter']['sanitize_title'];
-			if ( $sanitize_title instanceof WordPress_Profiler\Hook ) {
+			if ( $sanitize_title instanceof Core\Hook ) {
 				$sanitize_title->remove_function_hooks();
 			}
 
@@ -1217,8 +1213,8 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 		 * @param $action
 		 */
 		public function maybe_inject_hook( $action ) {
-			if ( ! ( $GLOBALS['wp_filter'][ $action ] instanceof WordPress_Profiler\Hook ) ) {
-				$GLOBALS['wp_filter'][ $action ] = new WordPress_Profiler\Hook( $GLOBALS['wp_filter'][ $action ], $action, $this->profiler, $this );
+			if ( ! ( $GLOBALS['wp_filter'][ $action ] instanceof Core\Hook ) ) {
+				$GLOBALS['wp_filter'][ $action ] = new Core\Hook( $GLOBALS['wp_filter'][ $action ], $action, $this->profiler, $this );
 			}
 		}
 
@@ -1226,7 +1222,7 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 		 * @param $action
 		 */
 		public function inject_timers( $action ) {
-			/** @var \pcfreak30\WordPress_Profiler\Hook $hook */
+			/** @var \WPProfiler\Core\Hook $hook */
 			$hook = $GLOBALS['wp_filter'][ $action ];
 			$hook->maybe_inject_function_timer();
 		}
@@ -1235,9 +1231,9 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 	/**
 	 * Class FunctionTracer
 	 *
-	 * @package pcfreak30\WordPress_Profiler\Collectors
+	 * @package WPProfiler\Core\Collectors
 	 */
-	class FunctionTracer extends WordPress_Profiler\CollectorAbstract {
+	class FunctionTracer extends Core\CollectorAbstract {
 		/**
 		 *
 		 */
@@ -1300,9 +1296,9 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 	/**
 	 * Class Query
 	 *
-	 * @package pcfreak30\WordPress_Profiler\Collectors
+	 * @package WPProfiler\Core\Collectors
 	 */
-	class Query extends WordPress_Profiler\CollectorAbstract {
+	class Query extends Core\CollectorAbstract {
 
 		/**
 		 *
@@ -1363,9 +1359,9 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 	/**
 	 * Class Request
 	 *
-	 * @package pcfreak30\WordPress_Profiler\Collectors
+	 * @package WPProfiler\Core\Collectors
 	 */
-	class Request extends WordPress_Profiler\CollectorAbstract {
+	class Request extends Core\CollectorAbstract {
 
 		/**
 		 *
@@ -1416,9 +1412,9 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 	/**
 	 * Class Db
 	 *
-	 * @package pcfreak30\WordPress_Profiler\Collectors
+	 * @package WPProfiler\Core\Collectors
 	 */
-	class Db extends WordPress_Profiler\CollectorAbstract {
+	class Db extends Core\CollectorAbstract {
 
 		/**
 		 *
@@ -1480,16 +1476,18 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 	}
 }
 
-namespace pcfreak30\WordPress_Profiler {
+namespace WPProfiler\Core {
+
+	use WPProfiler\Core;
 
 	/**
-	 * @return \pcfreak30\WordPress_Profiler
+	 * @return \WPProfiler\Core\Profiler
 	 */
 	function profiler() {
 		static $instance;
 
 		if ( ! $instance ) {
-			$instance = new \pcfreak30\WordPress_Profiler();
+			$instance = new Core\Profiler();
 			$instance->set_report_handler( new FileSystemReporter() );
 			$collectors = [
 				Collectors\Hook::class,
@@ -1517,12 +1515,12 @@ namespace pcfreak30\WordPress_Profiler {
 
 namespace {
 
-	use function pcfreak30\WordPress_Profiler\profiler;
+	use function WPProfiler\Core\profiler;
 
 	if ( ! function_exists( 'wp_profiler' ) ) {
 
 		/**
-		 * @return \pcfreak30\WordPress_Profiler
+		 * @return \WPProfiler\Core\Profiler
 		 */
 		function wp_profiler() {
 			return profiler();
@@ -1530,6 +1528,6 @@ namespace {
 
 	}
 
-	pcfreak30\WordPress_Profiler\profiler();
+	WPProfiler\Core\profiler();
 
 }

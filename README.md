@@ -68,8 +68,7 @@ The profiler supports setting a custom handler for the report data via `set_repo
 ### Example custom report handler
 
 ```php
-use pcfreak30\WordPress_Profiler\ReporterInterface;
-use function pcfreak30\WordPress_Profiler\profiler;
+use WPProfiler\Core\ReporterInterface;
 
 class MyCustomReporter implements ReporterInterface {
 	public function execute( $filename, array $data ) {
@@ -77,6 +76,6 @@ class MyCustomReporter implements ReporterInterface {
 	}
 }
 
-profiler()->set_report_handler( new MyCustomReporter() );
+wp_profiler()->set_report_handler( new MyCustomReporter() );
 ```
  
