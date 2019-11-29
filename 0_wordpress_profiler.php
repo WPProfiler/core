@@ -238,7 +238,7 @@ namespace pcfreak30 {
 		 *
 		 */
 		private function save_report() {
-			$time = time();
+
 			remove_action( 'all', [ $this, 'start_timer' ] );
 
 			if ( ! $this->reporting ) {
@@ -259,28 +259,15 @@ namespace pcfreak30 {
 			$this->sanitize_data();
 			$this->add_default_meta();
 
-			$data = [
-				'server'    => $_SERVER['HTTP_HOST'],
-				'url'       => ! empty( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '/',
-				'timestamp' => $time,
-				'method'    => $_SERVER['REQUEST_METHOD'],
-				'referer'   => isset( $_SERVER['HTTP_REFERER'] ) ? $_SERVER['HTTP_REFERER'] : null,
-				'recording' => $this->data,
-				'meta'      => $this->meta,
-			];
-
 			if ( $this->report_handler instanceof ReporterInterface ) {
-				$this->report_handler->execute( $filename, $data );
+				$this->report_handler->execute( $filename, $this->generate_report() );
 			}
 		}
 
 		/**
-		 * @param null $item
+		 * @param array $item
 		 */
-		private function sanitize_data( &$item = null ) {
-			if ( null === $item ) {
-				$item = &$this->data;
-			}
+		private function sanitize_data( array &$item ) {
 			if ( isset( $item['parent'] ) ) {
 				unset( $item['parent'] );
 			}
@@ -295,6 +282,26 @@ namespace pcfreak30 {
 		 */
 		private function add_default_meta() {
 
+		}
+
+		public function generate_report() {
+			$report = &$this->data;
+			if ( ! doing_action( 'shutdown' ) ) {
+				$report = $this->data;
+			}
+
+			$this->sanitize_data( $report );
+			$this->add_default_meta();
+
+			return [
+				'server'    => $_SERVER['HTTP_HOST'],
+				'url'       => ! empty( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '/',
+				'timestamp' => time(),
+				'method'    => $_SERVER['REQUEST_METHOD'],
+				'referer'   => isset( $_SERVER['HTTP_REFERER'] ) ? $_SERVER['HTTP_REFERER'] : null,
+				'recording' => $this->data,
+				'meta'      => $this->meta,
+			];
 		}
 
 		/**
