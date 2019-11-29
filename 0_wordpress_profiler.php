@@ -249,7 +249,7 @@ namespace pcfreak30 {
 				$path = 'root';
 			}
 
-			$filename = $this->current_hook ['time'] . '-' . $path . '-' . $_SERVER['REQUEST_METHOD'] . '-' . time() . '.json';
+			$filename = $this->data ['time'] . '-' . $path . '-' . $_SERVER['REQUEST_METHOD'] . '-' . time() . '.json';
 
 			$this->sanitize_data();
 
