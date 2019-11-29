@@ -2,10 +2,8 @@
 
 namespace pcfreak30 {
 
-	use pcfreak30\WordPress_Profiler\Hook;
+	use pcfreak30\WordPress_Profiler\CollectorInterface;
 	use pcfreak30\WordPress_Profiler\ReporterInterface;
-	use ReflectionFunction;
-	use ReflectionMethod;
 
 	/**
 	 * Class WordPress_Profiler
@@ -17,77 +15,14 @@ namespace pcfreak30 {
 	class WordPress_Profiler {
 
 		/**
-		 * Hook Collector
-		 */
-		const COLLECTOR_HOOK = 'hook';
-		/**
-		 * Function Collector
-		 */
-		const COLLECTOR_FUNCTION = 'function';
-		/**
-		 * Function Trace Collector
-		 */
-		const COLLECTOR_FUNCTION_TRACE = 'function_trace';
-		/**
-		 * Query Collector
-		 */
-		const COLLECTOR_QUERY = 'query';
-		/**
-		 * WP Data Collector
-		 */
-		const COLLECTOR_WP = 'wp';
-		/**
-		 * Request Collector
-		 */
-		const COLLECTOR_REQUEST = 'request';
-		/**
-		 * DB Collector
-		 */
-		const COLLECTOR_DB = 'db';
-		/**
-		 *
-		 */
-		const COLLECTORS = [
-			self::COLLECTOR_HOOK,
-			self::COLLECTOR_FUNCTION,
-			self::COLLECTOR_FUNCTION_TRACE,
-			self::COLLECTOR_QUERY,
-			self::COLLECTOR_WP,
-			self::COLLECTOR_REQUEST,
-			self::COLLECTOR_DB,
-		];
-
-		/**
 		 * Add version identifier
 		 */
 		const VERSION = '0.1.0';
-		/**
-		 * @var array
-		 */
-		private $data = [];
-		/**
-		 * @var array
-		 */
-		private $current_hook;
-		/**
-		 * @var int
-		 */
-		private $level = 0;
 
 		/**
 		 * @var \pcfreak30\WordPress_Profiler\ReporterInterface
 		 */
 		private $report_handler;
-
-		/**
-		 * @var bool
-		 */
-		private $disabled = false;
-
-		/**
-		 * @var bool
-		 */
-		private $reporting = true;
 
 		/**
 		 * @var array
@@ -98,82 +33,17 @@ namespace pcfreak30 {
 		 * @var array
 		 */
 		private $enabled_collectors = [];
+		/**
+		 * @var CollectorInterface[]
+		 */
+		private $collectors = [];
+		private $report_saved = false;
 
 		/**
 		 *
 		 */
 		public function init() {
-			add_action( 'all', [ $this, 'start_timer' ] );
-			add_action( 'shutdown', '__return_true', PHP_INT_MAX );
-			$this->data         = $this->record( true );
-			$this->current_hook = &$this->data;
-		}
-
-		/**
-		 * @param bool $root
-		 *
-		 * @return array
-		 */
-		private function record( $root = false ) {
-			$data = $this->create_timer_struct();
-			$data = [ 'hook' => current_action() ] + $data;
-			if ( $this->current_hook ) {
-				$data['parent'] = &$this->current_hook;
-			}
-
-			if ( $data['hook'] ) {
-				$data['functions'] = [];
-			}
-
-			if ( $this->is_collector_enabled( self::COLLECTOR_FUNCTION_TRACE ) ) {
-				$data['caller'] = null;
-				if ( ! $root ) {
-					$debug          = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 5 );
-					$data['caller'] = end( $debug );
-				}
-			}
-			$data['children'] = [];
-
-			return $data;
-		}
-
-		/**
-		 * @return array
-		 */
-		private function create_timer_struct() {
-			$data                 = [];
-			$data['start']        = $this->time();
-			$data['stop']         = null;
-			$data['time']         = null;
-			$data['human_time']   = null;
-			$data['memory_start'] = memory_get_usage();
-			$data['memory_stop']  = null;
-			$data['memory']       = null;
-
-			return $data;
-		}
-
-		/**
-		 * @return float|string
-		 */
-		private function time() {
-			return microtime( true );
-		}
-
-		/**
-		 * @param $name
-		 *
-		 * @return bool
-		 */
-		public function is_collector_enabled( $name ) {
-			return isset( $this->enabled_collectors[ $name ] );
-		}
-
-		/**
-		 *
-		 */
-		public function disable_all_collectors() {
-			$this->enabled_collectors = [];
+			register_shutdown_function( [ $this, 'save_report' ] );
 		}
 
 		/**
@@ -187,6 +57,8 @@ namespace pcfreak30 {
 			}
 			$this->enabled_collectors[ $name ] = true;
 
+			$this->collectors[ $name ]->enable();
+
 			return true;
 		}
 
@@ -196,317 +68,7 @@ namespace pcfreak30 {
 		 * @return bool
 		 */
 		public function is_collector( $name ) {
-			return in_array( $name, self::COLLECTORS );
-		}
-
-		/**
-		 * @param $name
-		 *
-		 * @return bool
-		 */
-		public function disable_collector( $name ) {
-			if ( ! $this->is_collector( $name ) ) {
-				return false;
-			}
-
-			unset( $this->enabled_collectors[ $name ] );
-
-			if ( $name === self::COLLECTOR_HOOK ) {
-				$this->record_stop( $this->current_hook );
-			}
-
-			return true;
-		}
-
-		/**
-		 * @param $item
-		 */
-		private function record_stop( &$item ) {
-			$item ['stop']        = $this->time();
-			$item ['memory_stop'] = memory_get_usage();
-			$item ['time']        = $item['stop'] - $item['start'];
-			$item ['memory']      = $item ['memory_stop'] - $item ['memory_start'];
-			$item['human_time']   = sprintf( '%f', $item['time'] );
-		}
-
-		/**
-		 *
-		 */
-		public function start_timer() {
-			if ( ! $this->is_collector_enabled( self::COLLECTOR_HOOK ) ) {
-				return;
-			}
-
-			$action = current_action();
-			if ( ! has_action( $action ) ) {
-				return;
-			}
-
-			if ( $this->is_collector_enabled( self::COLLECTOR_FUNCTION ) ) {
-				$this->maybe_inject_hook( $action );
-				$this->inject_function_timers( $action );
-			}
-
-			$this->current_hook['children'][] = $this->record();
-			$this->maybe_change_current_hook();
-
-			add_action( $action, [ $this, 'stop_timer' ], PHP_INT_MAX );
-
-		}
-
-		/**
-		 * @param $action
-		 */
-		private function maybe_inject_hook( $action ) {
-			if ( ! ( $GLOBALS['wp_filter'][ $action ] instanceof Hook ) ) {
-				$GLOBALS['wp_filter'][ $action ] = new Hook( $GLOBALS['wp_filter'][ $action ], $action );
-			}
-		}
-
-		/**
-		 * @param $action
-		 */
-		private function inject_function_timers( $action ) {
-			/** @var Hook $hook */
-			$hook = $GLOBALS['wp_filter'][ $action ];
-			$hook->maybe_inject_function_timer();
-		}
-
-		/**
-		 *
-		 */
-		private function maybe_change_current_hook() {
-			$count = count( $GLOBALS['wp_current_filter'] );
-			if ( $this->level < $count ) {
-				$this->move_down();
-				$this->level ++;
-			} else if ( $this->level >= $count ) {
-				$this->move_up();
-				$this->level --;
-			}
-		}
-
-		/**
-		 *
-		 */
-		private function move_down() {
-			end( $this->current_hook['children'] );
-			$this->current_hook = &$this->current_hook['children'][ key( $this->current_hook['children'] ) ];
-		}
-
-		/**
-		 *
-		 */
-		private function move_up() {
-			$this->current_hook = &$this->current_hook['parent'];
-		}
-
-		/**
-		 * @param null $data
-		 *
-		 * @return null
-		 */
-		public function stop_timer( $data = null ) {
-			$action   = current_action();
-			$shutdown = 'shutdown' === $action;
-			if ( $this->is_collector_enabled( self::COLLECTOR_HOOK ) && ! $shutdown ) {
-				return $data;
-			}
-			$this->record_end();
-			$this->maybe_change_current_hook();
-			if ( $shutdown ) {
-				$this->record_end();
-				$this->save_report();
-			}
-
-			return $data;
-		}
-
-		/**
-		 *
-		 */
-		private function record_end() {
-			$count  = array_count_values( $GLOBALS['wp_current_filter'] );
-			$action = current_action();
-			if ( 1 === $count[ $action ] ) {
-				remove_action( $action, [ $this, 'stop_timer' ], PHP_INT_MAX );
-			}
-			$this->record_stop( $this->current_hook );
-		}
-
-		/**
-		 *
-		 */
-		private function save_report() {
-			remove_action( 'all', [ $this, 'start_timer' ] );
-
-			if ( ! $this->reporting ) {
-				return;
-			}
-
-			/** @var Hook $sanitize_title */
-			$sanitize_title = $GLOBALS['wp_filter']['sanitize_title'];
-			$sanitize_title->remove_function_hooks();
-
-			$path = sanitize_title( $_SERVER['REQUEST_URI'] );
-			if ( empty( $path ) ) {
-				$path = 'root';
-			}
-
-			$filename = $this->data ['time'] . '-' . $path . '-' . $_SERVER['REQUEST_METHOD'] . '-' . time() . '.json';
-
-			$this->add_default_meta();
-
-			if ( $this->report_handler instanceof ReporterInterface ) {
-				$this->report_handler->execute( $filename, $this->generate_report() );
-			}
-		}
-
-		/**
-		 *
-		 */
-		private function add_default_meta() {
-			if ( did_action( 'parse_query' ) && $this->is_collector_enabled( self::COLLECTOR_QUERY ) ) {
-				$query   = $GLOBALS['wp_the_query'];
-				$methods = get_class_methods( $query );
-				$methods = array_filter( $methods, function ( $method ) {
-					return 0 === strpos( $method, 'is_' ) && ! in_array( $method, [ 'is_comments_popup' ] );
-				} );
-				$meta    = [];
-				foreach ( $methods as $method ) {
-					$meta[ $method ] = $query->{$method}();
-				}
-				$this->add_meta( 'query', $meta );
-			}
-
-			if ( did_action( 'parse_request' ) && $this->is_collector_enabled( self::COLLECTOR_REQUEST ) ) {
-				$this->add_meta( 'request', $GLOBALS['wp']->query_vars );
-			}
-
-			if ( ( defined( 'SAVEQUERIES' ) && SAVEQUERIES ) && $this->is_collector_enabled( self::COLLECTOR_DB ) ) {
-				$this->add_db_meta();
-			}
-		}
-
-		/**
-		 * @param string $key
-		 * @param array  $value
-		 */
-		public function add_meta( $key, $value ) {
-			$this->meta[ $key ] = $value;
-		}
-
-		/**
-		 *
-		 */
-		private function add_db_meta() {
-			$queries = &$GLOBALS['wpdb']->queries;
-			$meta    = [];
-
-			foreach ( $queries as $query ) {
-				$meta[] = [
-					'sql'        => $query[0],
-					'time'       => $query[1],
-					'human_time' => sprintf( '%f', $query[1] ),
-					'time_start' => $query[3],
-					'stack'      => explode( ', ', $query[2] ),
-					'data'       => $query[4],
-				];
-			}
-
-			$this->add_meta( 'db', $meta );
-		}
-
-		/**
-		 * @return array
-		 */
-		public function generate_report() {
-			$report = &$this->data;
-			if ( ! doing_action( 'shutdown' ) ) {
-				$report = $this->data;
-			}
-
-			$this->sanitize_data( $report );
-			$this->add_default_meta();
-
-			return [
-				'server'    => $_SERVER['HTTP_HOST'],
-				'url'       => ! empty( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '/',
-				'timestamp' => time(),
-				'method'    => $_SERVER['REQUEST_METHOD'],
-				'referer'   => isset( $_SERVER['HTTP_REFERER'] ) ? $_SERVER['HTTP_REFERER'] : null,
-				'recording' => $this->data,
-				'meta'      => $this->meta,
-			];
-		}
-
-		/**
-		 * @param array $item
-		 */
-		private function sanitize_data( array &$item ) {
-			if ( isset( $item['parent'] ) ) {
-				unset( $item['parent'] );
-			}
-
-			foreach ( $item['children'] as &$child ) {
-				$this->sanitize_data( $child );
-			}
-		}
-
-		/**
-		 * @return array
-		 * @noinspection PhpUnused
-		 */
-		public function get_current_hook() {
-			return $this->current_hook;
-		}
-
-		/**
-		 * @param $function
-		 *
-		 * @throws \ReflectionException
-		 */
-		public function start_function_timer( $function ) {
-			if ( $this->disabled ) {
-				return;
-			}
-
-			$function = $function['function'];
-			if ( is_array( $function ) && $function[0] === $this ) {
-				return;
-			}
-			$data = $this->create_timer_struct();
-			if ( is_array( $function ) ) {
-				$reflect = new ReflectionMethod( $function[0], $function[1] );
-				if ( is_object( $function[0] ) ) {
-					$function[0] = get_class( $function[0] );
-				}
-				$data ['file']     = $reflect->getFileName();
-				$data ['line']     = $reflect->getStartLine();
-				$data ['function'] = "{$function[0]}::$function[1]";
-			}
-			if ( is_string( $function ) || is_object( $function ) ) {
-				$reflect           = new ReflectionFunction( $function );
-				$data ['file']     = $reflect->getFileName();
-				$data ['line']     = $reflect->getStartLine();
-				$data ['function'] = $reflect->getName();
-			}
-			if ( empty( $data ['function'] ) ) {
-				$data ['function'] = 'UNKNOWN';
-			}
-			$this->current_hook['functions'][] = $data;
-		}
-
-		/**
-		 *
-		 */
-		public function stop_function_timer() {
-			if ( $this->disabled ) {
-				return;
-			}
-			end( $this->current_hook['functions'] );
-			$function = &$this->current_hook['functions'][ key( $this->current_hook['functions'] ) ];
-			$this->record_stop( $function );
+			return isset( $this->collectors[ $name ] );
 		}
 
 		/**
@@ -522,31 +84,6 @@ namespace pcfreak30 {
 		 */
 		public function set_report_handler( ReporterInterface $report_handler ) {
 			$this->report_handler = $report_handler;
-		}
-
-		/**
-		 * @return bool
-		 */
-		public function is_disabled() {
-			return $this->disabled;
-		}
-
-		/**
-		 *
-		 */
-
-		/**
-		 * @return bool
-		 */
-		public function is_reporting() {
-			return $this->reporting;
-		}
-
-		/**
-		 * @param bool $reporting
-		 */
-		public function set_reporting( $reporting ) {
-			$this->reporting = (bool) $reporting;
 		}
 
 		/**
@@ -573,6 +110,138 @@ namespace pcfreak30 {
 		public function get_meta( $key ) {
 			return $this->meta[ $key ];
 		}
+
+		public function register_collector( $name, CollectorInterface $collector ) {
+			$this->collectors[ $name ] = $collector;
+			$this->collectors[ $name ]->init();
+		}
+
+		public function call_collector( $name, $method, ...$args ) {
+			if ( ! $this->is_collector_enabled( $name ) ) {
+				if ( isset( $args[0] ) ) {
+					return $args[0];
+				}
+
+				return false;
+			}
+
+			return $this->collectors[ $name ]->{$method}( ...$args );
+		}
+
+		/**
+		 * @param $name
+		 *
+		 * @return bool
+		 */
+		public function is_collector_enabled( $name ) {
+			return isset( $this->enabled_collectors[ $name ] );
+		}
+
+		public function create_timer_store() {
+			$data                 = [];
+			$data['start']        = $this->time();
+			$data['stop']         = null;
+			$data['time']         = null;
+			$data['human_time']   = null;
+			$data['memory_start'] = memory_get_usage();
+			$data['memory_stop']  = null;
+			$data['memory']       = null;
+
+			return $data;
+		}
+
+		/**
+		 * @return float|string
+		 */
+		public function time() {
+			return microtime( true );
+		}
+
+		/**
+		 * @param string $key
+		 * @param array  $value
+		 */
+		public function add_meta( $key, $value ) {
+			$this->meta[ $key ] = $value;
+		}
+
+		/**
+		 *
+		 */
+
+		public function save_report() {
+			if ( $this->report_saved ) {
+				return;
+			}
+
+
+			$report = $this->generate_report();
+
+			$this->disable_all_collectors();
+
+			$filename_parts = [
+				$_SERVER['REQUEST_METHOD'],
+				time(),
+			];
+			$filename_parts = apply_filters( 'wp_profiler_report_filename', $filename_parts );
+
+			if ( $this->report_handler instanceof ReporterInterface ) {
+				$this->report_handler->execute( implode( '-', $filename_parts ) . '.json', $report );
+			}
+			$this->report_saved = true;
+		}
+
+		/**
+		 * @return array
+		 */
+		public function generate_report() {
+			$collected_data = [];
+
+			/** @var CollectorInterface $collector */
+			foreach ( array_keys( $this->enabled_collectors ) as $collector ) {
+				$collected_data[ $collector ] = $this->collectors[ $collector ]->get();
+			}
+
+			$collected_data = array_filter( $collected_data );
+
+			return array_filter( [
+				'server'           => $_SERVER['HTTP_HOST'],
+				'url'              => ! empty( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '/',
+				'timestamp'        => time(),
+				'method'           => $_SERVER['REQUEST_METHOD'],
+				'referer'          => isset( $_SERVER['HTTP_REFERER'] ) ? $_SERVER['HTTP_REFERER'] : null,
+				'total_time'       => isset( $collected_data['hook']['time'] ) ? $collected_data['hook']['time'] : null,
+				'total_human_time' => isset( $collected_data['hook']['human_time'] ) ? $collected_data['hook']['human_time'] : null,
+				'collectors'       => $collected_data,
+				'meta'             => $this->meta,
+			] );
+		}
+
+		/**
+		 *
+		 */
+		public function disable_all_collectors() {
+			foreach ( array_keys( $this->enabled_collectors ) as $collector ) {
+				$this->disable_collector( $collector );
+			}
+		}
+
+		/**
+		 * @param $name
+		 *
+		 * @return bool
+		 */
+		public function disable_collector( $name ) {
+			if ( ! $this->is_collector( $name ) ) {
+				return false;
+			}
+
+			unset( $this->enabled_collectors[ $name ] );
+
+			$this->collectors[ $name ]->disable();
+
+			return true;
+		}
 	}
 }
 
@@ -580,6 +249,8 @@ namespace pcfreak30\WordPress_Profiler {
 
 	use ArrayAccess;
 	use Iterator;
+	use pcfreak30\WordPress_Profiler;
+	use pcfreak30\WordPress_Profiler\Collectors\Function_;
 	use RuntimeException;
 	use WP_Hook;
 
@@ -596,6 +267,63 @@ namespace pcfreak30\WordPress_Profiler {
 		 * @return mixed
 		 */
 		public function execute( $filename, array $data );
+	}
+
+	interface CollectorInterface {
+
+		public function __construct( WordPress_Profiler $profiler );
+
+		public function init();
+
+		/**
+		 * @param mixed|null $data
+		 *
+		 * @return array
+		 */
+		public function get( $data = null );
+
+		public function enable();
+
+		public function disable();
+
+		public function start();
+
+		public function stop();
+	}
+
+	abstract class CollectorAbstract implements CollectorInterface {
+		const NAME = '';
+
+		const BUILD_FILENAME_PRIORITY = 0;
+
+		/**
+		 * @var WordPress_Profiler
+		 */
+		protected $profiler;
+
+		public function __construct( WordPress_Profiler $profiler ) {
+			$this->profiler = $profiler;
+		}
+
+		public function build_report_filename( $parts ) {
+			return $parts;
+		}
+
+		public function init() {
+			add_filter( 'wp_profiler_report_filename', [
+				$this,
+				'build_report_filename',
+			], static::BUILD_FILENAME_PRIORITY );
+		}
+
+		/**
+		 *
+		 */
+
+		protected function is_enabled() {
+			return $this->profiler->is_collector_enabled( static::NAME );
+		}
+
 	}
 
 	/**
@@ -649,21 +377,35 @@ namespace pcfreak30\WordPress_Profiler {
 		 * @var bool
 		 */
 		private $foreach_copy;
+		/**
+		 * @var WordPress_Profiler
+		 */
+		private $profiler;
+		/**
+		 * @var \pcfreak30\WordPress_Profiler\Collectors\Function_
+		 */
+		private $collector;
 
 		/**
 		 * WordPress_Profiler_Hook constructor.
 		 *
-		 * @param \WP_Hook $hook
-		 * @param          $hook_name
+		 * @param \WP_Hook                                         $hook
+		 * @param                                                  $hook_name
+		 *
+		 * @param WordPress_Profiler                               $profiler
+		 *
+		 * @param                                                  $collector
 		 *
 		 * @noinspection PhpUnused
 		 */
-		public function __construct( WP_Hook $hook, $hook_name ) {
+		public function __construct( WP_Hook $hook, $hook_name, WordPress_Profiler $profiler, Function_ $collector ) {
 			$this->hook         = $hook;
 			$this->hook_name    = $hook_name;
 			$this->start_cb     = [ $this, 'start_function_timer' ];
 			$this->stop_cb      = [ $this, 'stop_function_timer' ];
 			$this->foreach_copy = version_compare( PHP_VERSION, '5.6.0' ) >= 0;
+			$this->profiler     = $profiler;
+			$this->collector    = $collector;
 		}
 
 		/**
@@ -834,12 +576,18 @@ namespace pcfreak30\WordPress_Profiler {
 				$new_callbacks = [];
 
 				foreach ( $this->hook->callbacks[ $hook_priority ] as $function ) {
-					$start_id    = _wp_filter_build_unique_id( $this->hook_name, $this->start_cb, $hook_priority );
-					$stop_id     = _wp_filter_build_unique_id( $this->hook_name, $this->stop_cb, $hook_priority );
-					$function_id = _wp_filter_build_unique_id( $this->hook_name, $function['function'], $hook_priority );
-					$this->append_array_unique( $new_callbacks, $start_id, $start_wrapper );
+					$is_collector = is_array( $function['function'] ) && $function['function'] instanceof CollectorInterface;
+					$start_id     = _wp_filter_build_unique_id( $this->hook_name, $this->start_cb, $hook_priority );
+					$stop_id      = _wp_filter_build_unique_id( $this->hook_name, $this->stop_cb, $hook_priority );
+					$function_id  = _wp_filter_build_unique_id( $this->hook_name, $function['function'], $hook_priority );
+
+					if ( ! $is_collector ) {
+						$this->append_array_unique( $new_callbacks, $start_id, $start_wrapper );
+					}
 					$new_callbacks[ $function_id ] = $function;
-					$this->append_array_unique( $new_callbacks, $stop_id, $stop_wrapper );
+					if ( ! $is_collector ) {
+						$this->append_array_unique( $new_callbacks, $stop_id, $stop_wrapper );
+					}
 				}
 				$this->hook->callbacks[ $hook_priority ] = $new_callbacks;
 			}
@@ -893,7 +641,7 @@ namespace pcfreak30\WordPress_Profiler {
 		 *
 		 */
 		public function start_function_timer( $value = null ) {
-			profiler()->start_function_timer( $this->advance_hook() );
+			$this->collector->start_timer( $this->advance_hook() );
 
 			return $value;
 		}
@@ -935,7 +683,7 @@ namespace pcfreak30\WordPress_Profiler {
 		 */
 		public function stop_function_timer( $value = null ) {
 			$this->advance_hook( true );
-			profiler()->stop_function_timer();
+			$this->collector->stop_timer();
 
 			return $value;
 		}
@@ -950,12 +698,9 @@ namespace pcfreak30\WordPress_Profiler {
 		 * @noinspection PhpUnused
 		 */
 		public function add_filter( $tag, $function_to_add, $priority, $accepted_args ) {
-			$start_id         = _wp_filter_build_unique_id( $this->hook_name, $this->start_cb, $priority );
-			$stop_id          = _wp_filter_build_unique_id( $this->hook_name, $this->stop_cb, $priority );
-			$profiler_stop_id = _wp_filter_build_unique_id( $this->hook_name, [ profiler(), 'stop_timer' ], $priority );
-			$function_id      = _wp_filter_build_unique_id( $this->hook_name, $function_to_add, $priority );
+			$stop_id = _wp_filter_build_unique_id( $this->hook_name, $this->stop_cb, $priority );
 
-			if ( in_array( $function_id, [ $start_id, $stop_id, $profiler_stop_id ], true ) ) {
+			if ( is_array( $function_to_add ) && $function_to_add[0] instanceof CollectorInterface ) {
 				return $this->hook->add_filter( $tag, $function_to_add, $priority, $accepted_args );
 			}
 
@@ -976,11 +721,10 @@ namespace pcfreak30\WordPress_Profiler {
 		 * @noinspection PhpUnused
 		 */
 		public function remove_filter( $tag, $function_to_remove, $priority ) {
-			$function_id      = _wp_filter_build_unique_id( $this->hook_name, $function_to_remove, $priority );
-			$profiler_stop_id = _wp_filter_build_unique_id( $this->hook_name, [ profiler(), 'stop_timer' ], $priority );
-			if ( $function_id === $profiler_stop_id ) {
+			if ( is_array( $function_to_remove ) && $function_to_remove[0] instanceof CollectorInterface ) {
 				return $this->hook->remove_filter( $tag, $function_to_remove, $priority );
 			}
+
 			if ( $this->hook->has_filter( $tag, $function_to_remove ) ) {
 				$callbacks = &$this->hook->callbacks[ $priority ];
 				$current   = key( $callbacks );
@@ -1025,9 +769,479 @@ namespace pcfreak30\WordPress_Profiler {
 	}
 }
 
-namespace pcfreak30\WordPress_Profiler {
+namespace pcfreak30\WordPress_Profiler\Collectors {
 
 	use pcfreak30\WordPress_Profiler;
+	use ReflectionFunction;
+	use ReflectionMethod;
+
+	class Hook extends WordPress_Profiler\CollectorAbstract {
+
+		const BUILD_FILENAME_PRIORITY = 1;
+
+		const NAME = 'hook';
+		private $current_hook = [];
+		private $level = 0;
+		private $data = [];
+
+		public function build_report_filename( $parts ) {
+			array_unshift( $parts, $this->data['time'] );
+
+			return $parts;
+		}
+
+		public function init() {
+			parent::init();
+			$this->data         = $this->record( true );
+			$this->current_hook = &$this->data;
+		}
+
+		/**
+		 * @param bool $root
+		 *
+		 * @return array
+		 */
+		private function record( $root = false ) {
+			$data = $this->profiler->create_timer_store();
+			$data = [ 'hook' => current_action() ] + $data;
+			if ( $this->current_hook ) {
+				$data['parent'] = &$this->current_hook;
+			}
+			$data             = $this->profiler->call_collector( Function_::NAME, 'init_store', $data, $root );
+			$data             = $this->profiler->call_collector( FunctionTracer::NAME, 'collect', $data, $root );
+			$data['children'] = [];
+
+			return $data;
+		}
+
+		/**
+		 * @inheritDoc
+		 */
+		public function get( $data = null ) {
+			$collected = &$this->data;
+			$shutdown  = did_action( 'shutdown' );
+			if ( ! $shutdown ) {
+				$collected = $data;
+			}
+			if ( $shutdown ) {
+				$this->record_stop( $this->data );
+			}
+
+			if ( ! empty( $collected ) ) {
+				$this->sanitize_data( $collected );
+			}
+
+			return $collected;
+		}
+
+		/**
+		 * @param $item
+		 */
+		public function record_stop( &$item ) {
+			$item ['stop']        = $this->profiler->time();
+			$item ['memory_stop'] = memory_get_usage();
+			$item ['time']        = $item['stop'] - $item['start'];
+			$item ['memory']      = $item ['memory_stop'] - $item ['memory_start'];
+			$item['human_time']   = sprintf( '%f', $item['time'] );
+		}
+
+		/**
+		 * @param array $item
+		 */
+		private function sanitize_data( array &$item ) {
+			if ( isset( $item['parent'] ) ) {
+				unset( $item['parent'] );
+			}
+
+			foreach ( $item['children'] as &$child ) {
+				$this->sanitize_data( $child );
+			}
+		}
+
+		public function start_timer() {
+			$action = current_action();
+			if ( ! has_action( $action ) ) {
+				return;
+			}
+
+			$this->profiler->call_collector( Function_::NAME, 'maybe_inject_hook', $action );
+			$this->profiler->call_collector( Function_::NAME, 'inject_timers', $action );
+
+			$this->current_hook['children'][] = $this->record();
+			//	$this->current_hook['children'][ count( $this->current_hook['children'] ) - 1 ]['index'] = count( $this->current_hook['children'] ) - 1;
+			$this->maybe_change_current_hook();
+
+			add_action( $action, [ $this, 'stop_timer' ], PHP_INT_MAX );
+
+		}
+
+		private function maybe_change_current_hook() {
+			$count = count( $GLOBALS['wp_current_filter'] );
+			if ( $this->level < $count ) {
+				$this->move_down();
+				$this->level ++;
+			} else if ( $this->level >= $count ) {
+				$this->move_up();
+				$this->level --;
+			}
+		}
+
+		/**
+		 *
+		 */
+		private function move_down() {
+			end( $this->current_hook['children'] );
+			$this->current_hook = &$this->current_hook['children'][ key( $this->current_hook['children'] ) ];
+		}
+
+		/**
+		 *
+		 */
+		private function move_up() {
+			$this->current_hook = &$this->current_hook['parent'];
+		}
+
+		/**
+		 * @param null $data
+		 *
+		 * @return null
+		 */
+		public function stop_timer( $data = null ) {
+			$this->record_end();
+			$this->maybe_change_current_hook();
+
+			return $data;
+		}
+
+		/**
+		 *
+		 */
+		private function record_end() {
+			$count  = array_count_values( $GLOBALS['wp_current_filter'] );
+			$action = current_action();
+			if ( 1 === $count[ $action ] ) {
+				remove_action( $action, [ $this, 'stop_timer' ], PHP_INT_MAX );
+			}
+			$this->record_stop( $this->current_hook );
+		}
+
+		public function enable() {
+			add_action( 'all', [ $this, 'start_timer' ] );
+		}
+
+		public function disable() {
+			remove_filter( 'all', [ $this, 'start_timer' ] );
+			$this->record_stop( $this->current_hook );
+			$this->profiler->disable_collector( Function_::NAME );
+			$this->profiler->disable_collector( FunctionTracer::NAME );
+		}
+
+		public function start() {
+			// TODO: Implement start() method.
+		}
+
+		public function stop() {
+			// TODO: Implement stop() method.
+		}
+
+		/**
+		 * @return array
+		 */
+		public function get_current_hook() {
+			return $this->current_hook;
+		}
+	}
+
+	class Function_ extends WordPress_Profiler\CollectorAbstract {
+		const NAME = 'function';
+
+		const BUILD_FILENAME_PRIORITY = 0;
+
+		private $current_hook;
+
+		public function init() {
+			parent::init();
+			$this->current_hook = $this->profiler->call_collector( Hook::NAME, 'get_current_hook' );
+		}
+
+		/**
+		 * @inheritDoc
+		 */
+		public function get( $data = null ) {
+
+		}
+
+		public function enable() {
+			if ( ! $this->profiler->is_collector_enabled( Hook::NAME ) ) {
+				$this->profiler->disable_collector( self::NAME );
+			}
+		}
+
+		public function disable() {
+
+		}
+
+		public function start() {
+			// TODO: Implement start() method.
+		}
+
+		public function stop() {
+			// TODO: Implement stop() method.
+		}
+
+		public function init_store( $data ) {
+			if ( $data['hook'] ) {
+				$data['functions'] = [];
+			}
+
+			return $data;
+		}
+
+		public function build_report_filename( $parts ) {
+			/** @var \pcfreak30\WordPress_Profiler\Hook $sanitize_title */
+			$sanitize_title = $GLOBALS['wp_filter']['sanitize_title'];
+			if ( $sanitize_title instanceof WordPress_Profiler\Hook ) {
+				$sanitize_title->remove_function_hooks();
+			}
+
+			$path = sanitize_title( $_SERVER['REQUEST_URI'] );
+			if ( empty( $path ) ) {
+				$path = 'root';
+			}
+			array_unshift( $parts, $path );
+
+			return $parts;
+		}
+
+		/**
+		 * @param $function
+		 *
+		 * @throws \ReflectionException
+		 */
+		public function start_timer( $function ) {
+			$function = $function['function'];
+			if ( is_array( $function ) && $function[0] === $this ) {
+				return;
+			}
+			$data = $this->profiler->create_timer_store();
+			if ( is_array( $function ) ) {
+				$reflect = new ReflectionMethod( $function[0], $function[1] );
+				if ( is_object( $function[0] ) ) {
+					$function[0] = get_class( $function[0] );
+				}
+				$data ['file']     = $reflect->getFileName();
+				$data ['line']     = $reflect->getStartLine();
+				$data ['function'] = "{$function[0]}::$function[1]";
+			}
+			if ( is_string( $function ) || is_object( $function ) ) {
+				$reflect           = new ReflectionFunction( $function );
+				$data ['file']     = $reflect->getFileName();
+				$data ['line']     = $reflect->getStartLine();
+				$data ['function'] = $reflect->getName();
+			}
+			if ( empty( $data ['function'] ) ) {
+				$data ['function'] = 'UNKNOWN';
+			}
+
+			$current_hook                  = $this->profiler->call_collector( Hook::NAME, 'get_current_hook' );
+			$current_hook  ['functions'][] = $data;
+			if ( $current_hook  ['parent'] ) {
+				$current_hook  ['parent']['children'][ count( $current_hook  ['parent']['children'] ) - 1 ] = $current_hook;
+			}
+		}
+
+		/**
+		 *
+		 */
+		public function stop_timer() {
+			$current_hook = $this->profiler->call_collector( Hook::NAME, 'get_current_hook' );
+			end( $current_hook['functions'] );
+			$function = $current_hook['functions'][ key( $current_hook['functions'] ) ];
+			$this->profiler->call_collector( Hook::NAME, 'record_stop', $function );
+		}
+
+		/**
+		 * @param $action
+		 */
+		public function maybe_inject_hook( $action ) {
+			if ( ! ( $GLOBALS['wp_filter'][ $action ] instanceof WordPress_Profiler\Hook ) ) {
+				$GLOBALS['wp_filter'][ $action ] = new WordPress_Profiler\Hook( $GLOBALS['wp_filter'][ $action ], $action, $this->profiler, $this );
+			}
+		}
+
+		/**
+		 * @param $action
+		 */
+		public function inject_timers( $action ) {
+			/** @var \pcfreak30\WordPress_Profiler\Hook $hook */
+			$hook = $GLOBALS['wp_filter'][ $action ];
+			$hook->maybe_inject_function_timer();
+		}
+	}
+
+	class FunctionTracer extends WordPress_Profiler\CollectorAbstract {
+		const NAME = 'function_tracer';
+
+		/**
+		 * @inheritDoc
+		 */
+		public function get( $data = null ) {
+			return [];
+		}
+
+		public function enable() {
+			if ( ! $this->profiler->is_collector_enabled( Hook::NAME ) ) {
+				$this->profiler->disable_collector( self::NAME );
+			}
+		}
+
+		public function disable() {
+			// noop
+		}
+
+		public function collect( $data, $root ) {
+			$data['caller'] = null;
+			if ( ! $root ) {
+				$debug          = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 7 );
+				$data['caller'] = end( $debug );
+			}
+
+			return $data;
+		}
+
+		public function start() {
+			// TODO: Implement start() method.
+		}
+
+		public function stop() {
+			// TODO: Implement stop() method.
+		}
+	}
+
+	class Query extends WordPress_Profiler\CollectorAbstract {
+
+		const NAME = 'query';
+
+		/**
+		 * @inheritDoc
+		 */
+		public function get( $data = null ) {
+			if ( ! did_action( 'parse_query' ) ) {
+				return [];
+			}
+
+			$query   = $GLOBALS['wp_the_query'];
+			$methods = get_class_methods( $query );
+			$methods = array_filter( $methods, static function ( $method ) {
+				return 0 === strpos( $method, 'is_' ) && $method !== 'is_comments_popup';
+			} );
+			$meta    = [];
+
+			foreach ( $methods as $method ) {
+				$meta[ $method ] = $query->{$method}();
+			}
+
+			return $meta;
+		}
+
+		public function enable() {
+			// noop
+		}
+
+		public function disable() {
+			// noop
+		}
+
+		public function start() {
+			// TODO: Implement start() method.
+		}
+
+		public function stop() {
+			// TODO: Implement stop() method.
+		}
+	}
+
+	class Request extends WordPress_Profiler\CollectorAbstract {
+
+		const NAME = 'request';
+
+		/**
+		 * @inheritDoc
+		 */
+		public function get( $data = null ) {
+			if ( ! did_action( 'parse_query' ) ) {
+				return [];
+			}
+
+			return $GLOBALS['wp']->query_vars;
+
+		}
+
+		public function enable() {
+			// TODO: Implement enable() method.
+		}
+
+		public function disable() {
+			// TODO: Implement disable() method.
+		}
+
+		public function start() {
+			// TODO: Implement start() method.
+		}
+
+		public function stop() {
+			// TODO: Implement stop() method.
+		}
+	}
+
+	class Db extends WordPress_Profiler\CollectorAbstract {
+
+		const NAME = 'db';
+
+		/**
+		 * @inheritDoc
+		 */
+		public function get( $data = null ) {
+
+			if ( ! ( defined( 'SAVEQUERIES' ) && SAVEQUERIES ) ) {
+				return [];
+			}
+			$queries   = &$GLOBALS['wpdb']->queries;
+			$collected = [];
+
+			foreach ( $queries as $query ) {
+				$collected[] = [
+					'sql'        => $query[0],
+					'time'       => $query[1],
+					'human_time' => sprintf( '%f', $query[1] ),
+					'time_start' => $query[3],
+					'stack'      => explode( ', ', $query[2] ),
+					'data'       => $query[4],
+				];
+			}
+
+			return $collected;
+		}
+
+		public function enable() {
+			// TODO: Implement enable() method.
+		}
+
+		public function disable() {
+			// TODO: Implement disable() method.
+		}
+
+		public function start() {
+			// TODO: Implement start() method.
+		}
+
+		public function stop() {
+			// TODO: Implement stop() method.
+		}
+	}
+}
+
+namespace pcfreak30\WordPress_Profiler {
 
 	/**
 	 * @return \pcfreak30\WordPress_Profiler
@@ -1036,12 +1250,26 @@ namespace pcfreak30\WordPress_Profiler {
 		static $instance;
 
 		if ( ! $instance ) {
-			$instance = new WordPress_Profiler();
+			$instance = new \pcfreak30\WordPress_Profiler();
 			$instance->set_report_handler( new FileSystemReporter() );
-			$instance->init();
-			foreach ( array_diff( WordPress_Profiler::COLLECTORS, [ WordPress_Profiler::COLLECTOR_FUNCTION_TRACE ] ) as $collector ) {
-				profiler()->enable_collector( $collector );
+			$collectors = [
+				Collectors\Hook::class,
+				Collectors\Function_::class,
+				Collectors\FunctionTracer::class,
+				Collectors\Query::class,
+				Collectors\Request::class,
+				Collectors\Db::class,
+			];
+
+			foreach ( $collectors as $collector ) {
+				$name = constant( "{$collector}::NAME" );
+				$instance->register_collector( constant( "{$collector}::NAME" ), new $collector( $instance ) );
+				if ( $name === Collectors\FunctionTracer::NAME ) {
+					continue;
+				}
+				$instance->enable_collector( $name );
 			}
+			$instance->init();
 		}
 
 		return $instance;
