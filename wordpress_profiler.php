@@ -75,6 +75,9 @@ namespace pcfreak30 {
 			return $data;
 		}
 
+		/**
+		 * @return array
+		 */
 		private function create_timer_struct() {
 			$data                 = [];
 			$data['start']        = $this->time();
@@ -115,12 +118,18 @@ namespace pcfreak30 {
 
 		}
 
+		/**
+		 * @param $action
+		 */
 		private function maybe_inject_hook( $action ) {
 			if ( ! ( $GLOBALS['wp_filter'][ $action ] instanceof Hook ) ) {
 				$GLOBALS['wp_filter'][ $action ] = new Hook( $GLOBALS['wp_filter'][ $action ], $action );
 			}
 		}
 
+		/**
+		 * @param $action
+		 */
 		private function inject_function_timers( $action ) {
 			/** @var Hook $hook */
 			$hook = $GLOBALS['wp_filter'][ $action ];
@@ -182,6 +191,9 @@ namespace pcfreak30 {
 			$this->record_stop( $this->current_hook );
 		}
 
+		/**
+		 * @param $item
+		 */
 		private function record_stop( &$item ) {
 			$item ['stop']        = $this->time();
 			$item ['memory_stop'] = memory_get_usage();
@@ -290,6 +302,9 @@ namespace pcfreak30 {
 			$this->current_hook['functions'][] = $data;
 		}
 
+		/**
+		 *
+		 */
 		public function stop_function_timer() {
 			end( $this->current_hook['functions'] );
 			$function = &$this->current_hook['functions'][ key( $this->current_hook['functions'] ) ];
@@ -318,6 +333,9 @@ namespace pcfreak30\WordPress_Profiler {
 	 */
 	class Hook implements Iterator, ArrayAccess {
 
+		/**
+		 * @var bool
+		 */
 		private $injected = false;
 
 		/**
@@ -329,10 +347,19 @@ namespace pcfreak30\WordPress_Profiler {
 		 */
 		private $hook_name;
 
+		/**
+		 * @var array
+		 */
 		private $start_cb;
 
+		/**
+		 * @var array
+		 */
 		private $stop_cb;
 
+		/**
+		 * @var bool
+		 */
 		private $foreach_copy = false;
 
 		/**
@@ -471,6 +498,9 @@ namespace pcfreak30\WordPress_Profiler {
 			$this->injected = $injected;
 		}
 
+		/**
+		 *
+		 */
 		public function maybe_inject_function_timer() {
 			if ( $this->injected ) {
 				return;
@@ -479,6 +509,9 @@ namespace pcfreak30\WordPress_Profiler {
 			$this->injected = true;
 		}
 
+		/**
+		 * @param null $priority
+		 */
 		public function inject_function_timer( $priority = null ) {
 			if ( null === $priority ) {
 				$priority = array_keys( $this->hook->callbacks );
@@ -506,18 +539,36 @@ namespace pcfreak30\WordPress_Profiler {
 			}
 		}
 
+		/**
+		 * @return array
+		 */
 		private function get_start_cb_wrapper() {
 			return $this->get_cb_wrapper( $this->start_cb );
 		}
 
+		/**
+		 * @param $cb
+		 *
+		 * @return array
+		 */
 		private function get_cb_wrapper( $cb ) {
 			return [ 'function' => $cb, 'accepted_args' => 1 ];
 		}
 
+		/**
+		 * @return array
+		 */
 		private function get_stop_cb_wrapper() {
 			return $this->get_cb_wrapper( $this->stop_cb );
 		}
 
+		/**
+		 * @param $array
+		 * @param $key
+		 * @param $value
+		 *
+		 * @return string
+		 */
 		private function append_array_unique( &$array, $key, $value ) {
 			while ( isset( $array[ $key ] ) ) {
 				$key .= '_0';
@@ -539,6 +590,11 @@ namespace pcfreak30\WordPress_Profiler {
 			return $value;
 		}
 
+		/**
+		 * @param bool $end
+		 *
+		 * @return mixed
+		 */
 		private function advance_hook( $end = false ) {
 			$hook = &$this->hook->callbacks[ $this->hook->current_priority() ];
 			if ( $this->foreach_copy ) {
@@ -574,6 +630,14 @@ namespace pcfreak30\WordPress_Profiler {
 			return $value;
 		}
 
+		/**
+		 * @param $tag
+		 * @param $function_to_add
+		 * @param $priority
+		 * @param $accepted_args
+		 *
+		 * @return bool|void
+		 */
 		public function add_filter( $tag, $function_to_add, $priority, $accepted_args ) {
 			$start_id         = _wp_filter_build_unique_id( $this->hook_name, $this->start_cb, $priority );
 			$stop_id          = _wp_filter_build_unique_id( $this->hook_name, $this->stop_cb, $priority );
@@ -592,6 +656,13 @@ namespace pcfreak30\WordPress_Profiler {
 			return true;
 		}
 
+		/**
+		 * @param $tag
+		 * @param $function_to_remove
+		 * @param $priority
+		 *
+		 * @return bool
+		 */
 		public function remove_filter( $tag, $function_to_remove, $priority ) {
 			$function_id      = _wp_filter_build_unique_id( $this->hook_name, $function_to_remove, $priority );
 			$profiler_stop_id = _wp_filter_build_unique_id( $this->hook_name, [ profiler(), 'stop_timer' ], $priority );
@@ -628,6 +699,9 @@ namespace pcfreak30\WordPress_Profiler {
 			return false;
 		}
 
+		/**
+		 *
+		 */
 		public function remove_function_hooks() {
 			$callbacks = &$this->hook->callbacks;
 
@@ -644,6 +718,9 @@ namespace pcfreak30\WordPress_Profiler {
 
 	use pcfreak30\WordPress_Profiler;
 
+	/**
+	 * @return \pcfreak30\WordPress_Profiler
+	 */
 	function profiler() {
 		static $instance;
 
