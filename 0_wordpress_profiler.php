@@ -65,7 +65,6 @@ namespace pcfreak30 {
 			add_action( 'shutdown', '__return_true', PHP_INT_MAX );
 			$this->data           = $this->record( true );
 			$this->current_hook   = &$this->data;
-			$this->report_handler = [ $this, 'do_save' ];
 		}
 
 		/**
