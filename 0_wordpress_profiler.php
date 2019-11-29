@@ -26,7 +26,7 @@ namespace pcfreak30 {
 		/**
 		 * @var array
 		 */
-		private $current_hook = null;
+		private $current_hook;
 		/**
 		 * @var int
 		 */
@@ -172,7 +172,9 @@ namespace pcfreak30 {
 		}
 
 		/**
+		 * @param null $data
 		 *
+		 * @return null
 		 */
 		public function stop_timer( $data = null ) {
 			$this->record_end();
@@ -259,6 +261,7 @@ namespace pcfreak30 {
 
 		/**
 		 * @return array
+		 * @noinspection PhpUnused
 		 */
 		public function get_current_hook() {
 			return $this->current_hook;
@@ -307,6 +310,8 @@ namespace pcfreak30 {
 
 		/**
 		 * @param bool $function_tracing
+		 *
+		 * @noinspection PhpUnused
 		 */
 		public function set_function_tracing( $function_tracing ) {
 			$this->function_tracing = (bool) $function_tracing;
@@ -314,6 +319,7 @@ namespace pcfreak30 {
 
 		/**
 		 * @return \pcfreak30\WordPress_Profiler\ReporterInterface
+		 * @noinspection PhpUnused
 		 */
 		public function get_report_handler() {
 			return $this->report_handler;
@@ -340,6 +346,7 @@ namespace pcfreak30\WordPress_Profiler {
 	}
 
 	class FileSystemReporter implements ReporterInterface {
+		/** @noinspection PhpUnused */
 		public function execute( $filename, array $data ) {
 			$dir = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'profiler';
 			if ( ! @mkdir( $dir ) && ! @is_dir( $dir ) ) {
@@ -383,12 +390,15 @@ namespace pcfreak30\WordPress_Profiler {
 		/**
 		 * @var bool
 		 */
-		private $foreach_copy = false;
+		private $foreach_copy;
 
 		/**
 		 * WordPress_Profiler_Hook constructor.
 		 *
 		 * @param \WP_Hook $hook
+		 * @param          $hook_name
+		 *
+		 * @noinspection PhpUnused
 		 */
 		public function __construct( WP_Hook $hook, $hook_name ) {
 			$this->hook         = $hook;
@@ -402,6 +412,7 @@ namespace pcfreak30\WordPress_Profiler {
 		 * @param string $name
 		 *
 		 * @return mixed
+		 * @noinspection PhpUnused
 		 */
 		public function __get( $name ) {
 			if ( property_exists( $this, $name ) ) {
@@ -414,6 +425,8 @@ namespace pcfreak30\WordPress_Profiler {
 		/**
 		 * @param string $name
 		 * @param mixed  $value
+		 *
+		 * @noinspection PhpUnused
 		 */
 		public function __set( $name, $value ) {
 			if ( property_exists( $this, $name ) ) {
@@ -428,6 +441,7 @@ namespace pcfreak30\WordPress_Profiler {
 		 * @param string $name
 		 *
 		 * @return bool
+		 * @noinspection PhpUnused
 		 */
 		public function __isset( $name ) {
 			if ( property_exists( $this, $name ) ) {
@@ -439,6 +453,7 @@ namespace pcfreak30\WordPress_Profiler {
 
 		/**
 		 * @inheritDoc
+		 * @noinspection PhpUnused
 		 */
 		public function next() {
 			return $this->__call( __FUNCTION__, [] );
@@ -460,6 +475,7 @@ namespace pcfreak30\WordPress_Profiler {
 
 		/**
 		 * @inheritDoc
+		 * @noinspection PhpUnused
 		 */
 		public function key() {
 			return $this->__call( __FUNCTION__, [] );
@@ -467,6 +483,7 @@ namespace pcfreak30\WordPress_Profiler {
 
 		/**
 		 * @inheritDoc
+		 * @noinspection PhpUnused
 		 */
 		public function valid() {
 			return $this->__call( __FUNCTION__, [] );
@@ -474,6 +491,7 @@ namespace pcfreak30\WordPress_Profiler {
 
 		/**
 		 * @inheritDoc
+		 * @noinspection PhpUnused
 		 */
 		public function rewind() {
 			return $this->__call( __FUNCTION__, [] );
@@ -481,6 +499,7 @@ namespace pcfreak30\WordPress_Profiler {
 
 		/**
 		 * @inheritDoc
+		 * @noinspection PhpUnused
 		 */
 		public function offsetExists( $offset ) {
 			return $this->__call( __FUNCTION__, [ $offset ] );
@@ -488,6 +507,7 @@ namespace pcfreak30\WordPress_Profiler {
 
 		/**
 		 * @inheritDoc
+		 * @noinspection PhpUnused
 		 */
 		public function offsetGet( $offset ) {
 			return $this->__call( __FUNCTION__, [ $offset ] );
@@ -495,6 +515,7 @@ namespace pcfreak30\WordPress_Profiler {
 
 		/**
 		 * @inheritDoc
+		 * @noinspection PhpUnused
 		 */
 		public function offsetSet( $offset, $value ) {
 			return $this->__call( __FUNCTION__, [ $offset, $value ] );
@@ -502,6 +523,7 @@ namespace pcfreak30\WordPress_Profiler {
 
 		/**
 		 * @inheritDoc
+		 * @noinspection PhpUnused
 		 */
 		public function offsetUnset( $offset ) {
 			return $this->__call( __FUNCTION__, [ $offset ] );
@@ -509,6 +531,7 @@ namespace pcfreak30\WordPress_Profiler {
 
 		/**
 		 * @return bool
+		 * @noinspection PhpUnused
 		 */
 		public function is_injected() {
 			return $this->injected;
@@ -516,6 +539,8 @@ namespace pcfreak30\WordPress_Profiler {
 
 		/**
 		 * @param bool $injected
+		 *
+		 * @noinspection PhpUnused
 		 */
 		public function set_injected( $injected ) {
 			$this->injected = $injected;
@@ -604,8 +629,10 @@ namespace pcfreak30\WordPress_Profiler {
 		/**
 		 * @param mixed|null $value
 		 *
+		 * @return mixed|null
 		 * @throws \ReflectionException
 		 * @noinspection PhpUnused
+		 *
 		 */
 		public function start_function_timer( $value = null ) {
 			profiler()->start_function_timer( $this->advance_hook() );
@@ -630,11 +657,13 @@ namespace pcfreak30\WordPress_Profiler {
 				}
 			}
 
+			/** @noinspection PhpUndefinedVariableInspection */
 			return $pointer ?: current( $hook );
 		}
 
 		/**
 		 * @inheritDoc
+		 * @noinspection PhpUnused
 		 */
 		public function current() {
 			return $this->__call( __FUNCTION__, [] );
@@ -660,6 +689,7 @@ namespace pcfreak30\WordPress_Profiler {
 		 * @param $accepted_args
 		 *
 		 * @return bool|void
+		 * @noinspection PhpUnused
 		 */
 		public function add_filter( $tag, $function_to_add, $priority, $accepted_args ) {
 			$start_id         = _wp_filter_build_unique_id( $this->hook_name, $this->start_cb, $priority );
@@ -667,7 +697,7 @@ namespace pcfreak30\WordPress_Profiler {
 			$profiler_stop_id = _wp_filter_build_unique_id( $this->hook_name, [ profiler(), 'stop_timer' ], $priority );
 			$function_id      = _wp_filter_build_unique_id( $this->hook_name, $function_to_add, $priority );
 
-			if ( in_array( $function_id, [ $start_id, $stop_id, $profiler_stop_id ] ) ) {
+			if ( in_array( $function_id, [ $start_id, $stop_id, $profiler_stop_id ], true ) ) {
 				return $this->hook->add_filter( $tag, $function_to_add, $priority, $accepted_args );
 			}
 
@@ -685,11 +715,12 @@ namespace pcfreak30\WordPress_Profiler {
 		 * @param $priority
 		 *
 		 * @return bool
+		 * @noinspection PhpUnused
 		 */
 		public function remove_filter( $tag, $function_to_remove, $priority ) {
 			$function_id      = _wp_filter_build_unique_id( $this->hook_name, $function_to_remove, $priority );
 			$profiler_stop_id = _wp_filter_build_unique_id( $this->hook_name, [ profiler(), 'stop_timer' ], $priority );
-			if ( $function_id == $profiler_stop_id ) {
+			if ( $function_id === $profiler_stop_id ) {
 				return $this->hook->remove_filter( $tag, $function_to_remove, $priority );
 			}
 			if ( $this->hook->has_filter( $tag, $function_to_remove ) ) {
@@ -706,8 +737,7 @@ namespace pcfreak30\WordPress_Profiler {
 				$stop_function_key  = $keys[ $function_index + 1 ];
 
 				$this->hook->remove_filter( $tag, $function_to_remove, $priority );
-				unset( $callbacks[ $start_function_key ] );
-				unset( $callbacks[ $stop_function_key ] );
+				unset( $callbacks[ $start_function_key ], $callbacks[ $stop_function_key ] );
 
 				if ( $function_index < $current_index ) {
 					reset( $callbacks );
@@ -729,7 +759,7 @@ namespace pcfreak30\WordPress_Profiler {
 			$callbacks = &$this->hook->callbacks;
 
 			foreach ( array_keys( $callbacks ) as $priority ) {
-				$callbacks[ $priority ] = array_filter( $callbacks[ $priority ], function ( $function ) {
+				$callbacks[ $priority ] = array_filter( $callbacks[ $priority ], static function ( $function ) {
 					return ! ( is_array( $function['function'] ) && $function['function'][0] instanceof self );
 				} );
 			}
