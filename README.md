@@ -53,11 +53,11 @@ This makes a copy of `$wp->query_vars`.
 
 ## Db
 
-Even when this collector is enabled, it will only work when `SAVEQUERIES` WordPress constant is enabled. It relies on `$wpdb->queries`, and the output is a customized format mapped from the resulting arrays of `wpdb::log_query`. See [example.json](example.json#L7035-L7050) for reference to the format.
+Even when this collector is enabled, it will only work when `SAVEQUERIES` WordPress constant is enabled. It relies on `$wpdb->queries`, and the output is a customized format mapped from the resulting arrays of `wpdb::log_query`. See [example.json](https://github.com/WPProfiler/core/blob/master/example.json#L7035-L7050) for reference to the format.
 
 # Example hook report
 
-Here is a sample of a report generated from this plugin: [example.json](example.json)
+Here is a sample of a report generated from this plugin: [example.json](https://github.com/WPProfiler/core/blob/master/example.json)
 
 # Use a custom report handler
 
