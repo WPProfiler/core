@@ -256,7 +256,6 @@ namespace pcfreak30 {
 
 			$filename = $this->data ['time'] . '-' . $path . '-' . $_SERVER['REQUEST_METHOD'] . '-' . time() . '.json';
 
-			$this->sanitize_data();
 			$this->add_default_meta();
 
 			if ( $this->report_handler instanceof ReporterInterface ) {
