@@ -238,7 +238,6 @@ namespace pcfreak30 {
 		 *
 		 */
 		private function save_report() {
-
 			remove_action( 'all', [ $this, 'start_timer' ] );
 
 			if ( ! $this->reporting ) {
