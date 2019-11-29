@@ -37,6 +37,9 @@ namespace pcfreak30 {
 		 * @var CollectorInterface[]
 		 */
 		private $collectors = [];
+		/**
+		 * @var bool
+		 */
 		private $report_saved = false;
 
 		/**
@@ -111,11 +114,22 @@ namespace pcfreak30 {
 			return $this->meta[ $key ];
 		}
 
+		/**
+		 * @param                                                  $name
+		 * @param \pcfreak30\WordPress_Profiler\CollectorInterface $collector
+		 */
 		public function register_collector( $name, CollectorInterface $collector ) {
 			$this->collectors[ $name ] = $collector;
 			$this->collectors[ $name ]->init();
 		}
 
+		/**
+		 * @param       $name
+		 * @param       $method
+		 * @param mixed ...$args
+		 *
+		 * @return bool|mixed
+		 */
 		public function call_collector( $name, $method, ...$args ) {
 			if ( ! $this->is_collector_enabled( $name ) ) {
 				if ( isset( $args[0] ) ) {
@@ -137,6 +151,9 @@ namespace pcfreak30 {
 			return isset( $this->enabled_collectors[ $name ] );
 		}
 
+		/**
+		 * @return array
+		 */
 		public function create_timer_store() {
 			$data                 = [];
 			$data['start']        = $this->time();
@@ -269,10 +286,23 @@ namespace pcfreak30\WordPress_Profiler {
 		public function execute( $filename, array $data );
 	}
 
+	/**
+	 * Interface CollectorInterface
+	 *
+	 * @package pcfreak30\WordPress_Profiler
+	 */
 	interface CollectorInterface {
 
+		/**
+		 * CollectorInterface constructor.
+		 *
+		 * @param \pcfreak30\WordPress_Profiler $profiler
+		 */
 		public function __construct( WordPress_Profiler $profiler );
 
+		/**
+		 * @return mixed
+		 */
 		public function init();
 
 		/**
@@ -282,18 +312,41 @@ namespace pcfreak30\WordPress_Profiler {
 		 */
 		public function get( $data = null );
 
+		/**
+		 * @return mixed
+		 */
 		public function enable();
 
+		/**
+		 * @return mixed
+		 */
 		public function disable();
 
+		/**
+		 * @return mixed
+		 */
 		public function start();
 
+		/**
+		 * @return mixed
+		 */
 		public function stop();
 	}
 
+	/**
+	 * Class CollectorAbstract
+	 *
+	 * @package pcfreak30\WordPress_Profiler
+	 */
 	abstract class CollectorAbstract implements CollectorInterface {
+		/**
+		 *
+		 */
 		const NAME = '';
 
+		/**
+		 *
+		 */
 		const BUILD_FILENAME_PRIORITY = 0;
 
 		/**
@@ -301,14 +354,27 @@ namespace pcfreak30\WordPress_Profiler {
 		 */
 		protected $profiler;
 
+		/**
+		 * CollectorAbstract constructor.
+		 *
+		 * @param \pcfreak30\WordPress_Profiler $profiler
+		 */
 		public function __construct( WordPress_Profiler $profiler ) {
 			$this->profiler = $profiler;
 		}
 
+		/**
+		 * @param $parts
+		 *
+		 * @return mixed
+		 */
 		public function build_report_filename( $parts ) {
 			return $parts;
 		}
 
+		/**
+		 * @return mixed|void
+		 */
 		public function init() {
 			add_filter( 'wp_profiler_report_filename', [
 				$this,
@@ -558,7 +624,7 @@ namespace pcfreak30\WordPress_Profiler {
 		}
 
 		/**
-		 * @param null $priority
+		 * @param int[] $priority
 		 */
 		public function inject_function_timer( $priority = null ) {
 			if ( null === $priority ) {
@@ -601,7 +667,7 @@ namespace pcfreak30\WordPress_Profiler {
 		}
 
 		/**
-		 * @param $cb
+		 * @param callable $cb
 		 *
 		 * @return array
 		 */
@@ -617,9 +683,9 @@ namespace pcfreak30\WordPress_Profiler {
 		}
 
 		/**
-		 * @param $array
-		 * @param $key
-		 * @param $value
+		 * @param array  $array
+		 * @param string $key
+		 * @param array  $value
 		 *
 		 * @return string
 		 */
@@ -689,10 +755,10 @@ namespace pcfreak30\WordPress_Profiler {
 		}
 
 		/**
-		 * @param $tag
-		 * @param $function_to_add
-		 * @param $priority
-		 * @param $accepted_args
+		 * @param string   $tag
+		 * @param callable $function_to_add
+		 * @param int      $priority
+		 * @param int      $accepted_args
 		 *
 		 * @return bool|void
 		 * @noinspection PhpUnused
@@ -713,9 +779,9 @@ namespace pcfreak30\WordPress_Profiler {
 		}
 
 		/**
-		 * @param $tag
-		 * @param $function_to_remove
-		 * @param $priority
+		 * @param string   $tag
+		 * @param callable $function_to_remove
+		 * @param int      $priority
 		 *
 		 * @return bool
 		 * @noinspection PhpUnused
@@ -775,21 +841,49 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 	use ReflectionFunction;
 	use ReflectionMethod;
 
+	/**
+	 * Class Hook
+	 *
+	 * @package pcfreak30\WordPress_Profiler\Collectors
+	 */
 	class Hook extends WordPress_Profiler\CollectorAbstract {
 
+		/**
+		 *
+		 */
 		const BUILD_FILENAME_PRIORITY = 1;
 
+		/**
+		 *
+		 */
 		const NAME = 'hook';
+		/**
+		 * @var array
+		 */
 		private $current_hook = [];
+		/**
+		 * @var int
+		 */
 		private $level = 0;
+		/**
+		 * @var array
+		 */
 		private $data = [];
 
+		/**
+		 * @param $parts
+		 *
+		 * @return mixed
+		 */
 		public function build_report_filename( $parts ) {
 			array_unshift( $parts, $this->data['time'] );
 
 			return $parts;
 		}
 
+		/**
+		 * @return mixed|void
+		 */
 		public function init() {
 			parent::init();
 			$this->data         = $this->record( true );
@@ -835,7 +929,7 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 		}
 
 		/**
-		 * @param $item
+		 * @param array $item
 		 */
 		public function record_stop( &$item ) {
 			$item ['stop']        = $this->profiler->time();
@@ -858,6 +952,9 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 			}
 		}
 
+		/**
+		 *
+		 */
 		public function start_timer() {
 			$action = current_action();
 			if ( ! has_action( $action ) ) {
@@ -875,6 +972,9 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 
 		}
 
+		/**
+		 *
+		 */
 		private function maybe_change_current_hook() {
 			$count = count( $GLOBALS['wp_current_filter'] );
 			if ( $this->level < $count ) {
@@ -925,10 +1025,16 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 			$this->record_stop( $this->current_hook );
 		}
 
+		/**
+		 * @return mixed|void
+		 */
 		public function enable() {
 			add_action( 'all', [ $this, 'start_timer' ] );
 		}
 
+		/**
+		 * @return mixed|void
+		 */
 		public function disable() {
 			remove_filter( 'all', [ $this, 'start_timer' ] );
 			$this->record_stop( $this->current_hook );
@@ -936,10 +1042,16 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 			$this->profiler->disable_collector( FunctionTracer::NAME );
 		}
 
+		/**
+		 * @return mixed|void
+		 */
 		public function start() {
 			// TODO: Implement start() method.
 		}
 
+		/**
+		 * @return mixed|void
+		 */
 		public function stop() {
 			// TODO: Implement stop() method.
 		}
@@ -952,13 +1064,30 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 		}
 	}
 
+	/**
+	 * Class Function_
+	 *
+	 * @package pcfreak30\WordPress_Profiler\Collectors
+	 */
 	class Function_ extends WordPress_Profiler\CollectorAbstract {
+		/**
+		 *
+		 */
 		const NAME = 'function';
 
+		/**
+		 *
+		 */
 		const BUILD_FILENAME_PRIORITY = 0;
 
+		/**
+		 * @var
+		 */
 		private $current_hook;
 
+		/**
+		 * @return void
+		 */
 		public function init() {
 			parent::init();
 			$this->current_hook = $this->profiler->call_collector( Hook::NAME, 'get_current_hook' );
@@ -971,24 +1100,41 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 
 		}
 
+		/**
+		 * @return void
+		 */
 		public function enable() {
 			if ( ! $this->profiler->is_collector_enabled( Hook::NAME ) ) {
 				$this->profiler->disable_collector( self::NAME );
 			}
 		}
 
+		/**
+		 * @return mixed|void
+		 */
 		public function disable() {
 
 		}
 
+		/**
+		 * @return mixed|void
+		 */
 		public function start() {
 			// TODO: Implement start() method.
 		}
 
+		/**
+		 * @return mixed|void
+		 */
 		public function stop() {
 			// TODO: Implement stop() method.
 		}
 
+		/**
+		 * @param $data
+		 *
+		 * @return array
+		 */
 		public function init_store( $data ) {
 			if ( $data['hook'] ) {
 				$data['functions'] = [];
@@ -997,6 +1143,11 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 			return $data;
 		}
 
+		/**
+		 * @param $parts
+		 *
+		 * @return array
+		 */
 		public function build_report_filename( $parts ) {
 			/** @var \pcfreak30\WordPress_Profiler\Hook $sanitize_title */
 			$sanitize_title = $GLOBALS['wp_filter']['sanitize_title'];
@@ -1014,11 +1165,12 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 		}
 
 		/**
-		 * @param $function
+		 * @param array $function
 		 *
 		 * @throws \ReflectionException
 		 */
 		public function start_timer( $function ) {
+			/** @var callable $function */
 			$function = $function['function'];
 			if ( is_array( $function ) && $function[0] === $this ) {
 				return;
@@ -1033,6 +1185,7 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 				$data ['line']     = $reflect->getStartLine();
 				$data ['function'] = "{$function[0]}::$function[1]";
 			}
+			/** @noinspection CallableParameterUseCaseInTypeContextInspection */
 			if ( is_string( $function ) || is_object( $function ) ) {
 				$reflect           = new ReflectionFunction( $function );
 				$data ['file']     = $reflect->getFileName();
@@ -1079,7 +1232,15 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 		}
 	}
 
+	/**
+	 * Class FunctionTracer
+	 *
+	 * @package pcfreak30\WordPress_Profiler\Collectors
+	 */
 	class FunctionTracer extends WordPress_Profiler\CollectorAbstract {
+		/**
+		 *
+		 */
 		const NAME = 'function_tracer';
 
 		/**
@@ -1089,16 +1250,28 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 			return [];
 		}
 
+		/**
+		 * @return mixed|void
+		 */
 		public function enable() {
 			if ( ! $this->profiler->is_collector_enabled( Hook::NAME ) ) {
 				$this->profiler->disable_collector( self::NAME );
 			}
 		}
 
+		/**
+		 * @return mixed|void
+		 */
 		public function disable() {
 			// noop
 		}
 
+		/**
+		 * @param array $data
+		 * @param bool  $root
+		 *
+		 * @return mixed
+		 */
 		public function collect( $data, $root ) {
 			$data['caller'] = null;
 			if ( ! $root ) {
@@ -1109,17 +1282,31 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 			return $data;
 		}
 
+		/**
+		 * @return mixed|void
+		 */
 		public function start() {
 			// TODO: Implement start() method.
 		}
 
+		/**
+		 * @return mixed|void
+		 */
 		public function stop() {
 			// TODO: Implement stop() method.
 		}
 	}
 
+	/**
+	 * Class Query
+	 *
+	 * @package pcfreak30\WordPress_Profiler\Collectors
+	 */
 	class Query extends WordPress_Profiler\CollectorAbstract {
 
+		/**
+		 *
+		 */
 		const NAME = 'query';
 
 		/**
@@ -1144,25 +1331,45 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 			return $meta;
 		}
 
+		/**
+		 * @return mixed|void
+		 */
 		public function enable() {
 			// noop
 		}
 
+		/**
+		 * @return mixed|void
+		 */
 		public function disable() {
 			// noop
 		}
 
+		/**
+		 * @return mixed|void
+		 */
 		public function start() {
 			// TODO: Implement start() method.
 		}
 
+		/**
+		 * @return mixed|void
+		 */
 		public function stop() {
 			// TODO: Implement stop() method.
 		}
 	}
 
+	/**
+	 * Class Request
+	 *
+	 * @package pcfreak30\WordPress_Profiler\Collectors
+	 */
 	class Request extends WordPress_Profiler\CollectorAbstract {
 
+		/**
+		 *
+		 */
 		const NAME = 'request';
 
 		/**
@@ -1177,25 +1384,45 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 
 		}
 
+		/**
+		 * @return mixed|void
+		 */
 		public function enable() {
 			// TODO: Implement enable() method.
 		}
 
+		/**
+		 * @return mixed|void
+		 */
 		public function disable() {
 			// TODO: Implement disable() method.
 		}
 
+		/**
+		 * @return mixed|void
+		 */
 		public function start() {
 			// TODO: Implement start() method.
 		}
 
+		/**
+		 * @return mixed|void
+		 */
 		public function stop() {
 			// TODO: Implement stop() method.
 		}
 	}
 
+	/**
+	 * Class Db
+	 *
+	 * @package pcfreak30\WordPress_Profiler\Collectors
+	 */
 	class Db extends WordPress_Profiler\CollectorAbstract {
 
+		/**
+		 *
+		 */
 		const NAME = 'db';
 
 		/**
@@ -1223,18 +1450,30 @@ namespace pcfreak30\WordPress_Profiler\Collectors {
 			return $collected;
 		}
 
+		/**
+		 * @return mixed|void
+		 */
 		public function enable() {
 			// TODO: Implement enable() method.
 		}
 
+		/**
+		 * @return mixed|void
+		 */
 		public function disable() {
 			// TODO: Implement disable() method.
 		}
 
+		/**
+		 * @return mixed|void
+		 */
 		public function start() {
 			// TODO: Implement start() method.
 		}
 
+		/**
+		 * @return mixed|void
+		 */
 		public function stop() {
 			// TODO: Implement stop() method.
 		}
@@ -1282,6 +1521,9 @@ namespace {
 
 	if ( ! function_exists( 'wp_profiler' ) ) {
 
+		/**
+		 * @return \pcfreak30\WordPress_Profiler
+		 */
 		function wp_profiler() {
 			return profiler();
 		}
