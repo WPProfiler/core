@@ -279,7 +279,7 @@ namespace pcfreak30 {
 			}
 
 			if ( did_action( 'parse_request' ) ) {
-				$this->add_meta( 'request', $GLOBALS['wpdb']->query_vars );
+				$this->add_meta( 'request', $GLOBALS['wp']->query_vars );
 			}
 
 			if ( defined( 'SAVEQUERIES' ) && SAVEQUERIES ) {
