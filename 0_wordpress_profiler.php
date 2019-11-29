@@ -283,7 +283,7 @@ namespace pcfreak30 {
 			}
 
 			if ( defined( 'SAVEQUERIES' ) && SAVEQUERIES ) {
-				$this->add_meta( 'db', $GLOBALS['wpdb']->queries );
+				$this->add_db_meta();
 			}
 		}
 
@@ -293,6 +293,24 @@ namespace pcfreak30 {
 		 */
 		public function add_meta( $key, $value ) {
 			$this->meta[ $key ] = $value;
+		}
+
+		private function add_db_meta() {
+			$queries = &$GLOBALS['wpdb']->queries;
+			$meta    = [];
+
+			foreach ( $queries as $query ) {
+				$meta[] = [
+					'sql'        => $query[0],
+					'time'       => $query[1],
+					'human_time' => sprintf( '%f', $query[1] ),
+					'time_start' => $query[3],
+					'stack'      => explode( ', ', $query[2] ),
+					'data'       => $query[4],
+				];
+			}
+
+			$this->add_meta( 'db', $meta );
 		}
 
 		public function generate_report() {
