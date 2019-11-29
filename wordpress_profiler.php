@@ -313,7 +313,7 @@ namespace pcfreak30 {
 		}
 
 		/**
-		 * @return mixed
+		 * @return callable
 		 */
 		public function get_report_handler() {
 			return $this->report_handler;
