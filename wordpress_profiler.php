@@ -328,9 +328,9 @@ namespace pcfreak30 {
 		}
 
 		/**
-		 * @param mixed $report_handler
+		 * @param callable $report_handler
 		 */
-		public function set_report_handler( $report_handler ) {
+		public function set_report_handler( callable $report_handler ) {
 			$this->report_handler = $report_handler;
 		}
 	}
