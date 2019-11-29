@@ -15,6 +15,24 @@ namespace pcfreak30 {
 	 * @version 0.1.0
 	 */
 	class WordPress_Profiler {
+
+		const COLLECTOR_HOOK = 'hook';
+		const COLLECTOR_FUNCTION = 'function';
+		const COLLECTOR_FUNCTION_TRACE = 'function_trace';
+		const COLLECTOR_QUERY = 'query';
+		const COLLECTOR_WP = 'wp';
+		const COLLECTOR_REQUEST = 'request';
+		const COLLECTOR_DB = 'db';
+		const COLLECTORS = [
+			self::COLLECTOR_HOOK,
+			self::COLLECTOR_FUNCTION,
+			self::COLLECTOR_FUNCTION_TRACE,
+			self::COLLECTOR_QUERY,
+			self::COLLECTOR_WP,
+			self::COLLECTOR_REQUEST,
+			self::COLLECTOR_DB,
+		];
+
 		/**
 		 * Add version identifier
 		 */
@@ -31,11 +49,6 @@ namespace pcfreak30 {
 		 * @var int
 		 */
 		private $level = 0;
-
-		/**
-		 * @var bool
-		 */
-		private $function_tracing = false;
 
 		/**
 		 * @var \pcfreak30\WordPress_Profiler\ReporterInterface
@@ -56,6 +69,11 @@ namespace pcfreak30 {
 		 * @var array
 		 */
 		private $meta = [];
+
+		/**
+		 * @var array
+		 */
+		private $enabled_collectors = [];
 
 		/**
 		 *
@@ -83,7 +101,7 @@ namespace pcfreak30 {
 				$data['functions'] = [];
 			}
 
-			if ( $this->function_tracing ) {
+			if ( $this->is_collector_enabled( self::COLLECTOR_FUNCTION_TRACE ) ) {
 				$data['caller'] = null;
 				if ( ! $root ) {
 					$debug          = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 5 );
@@ -118,11 +136,57 @@ namespace pcfreak30 {
 			return microtime( true );
 		}
 
+		public function is_collector_enabled( $name ) {
+			return isset( $this->enabled_collectors[ $name ] );
+		}
+
+		public function disable_all_collectors() {
+			$this->enabled_collectors = [];
+		}
+
+		public function enable_collector( $name ) {
+			if ( ! $this->is_collector( $name ) ) {
+				return false;
+			}
+			$this->enabled_collectors[ $name ] = true;
+
+			return true;
+		}
+
+		public function is_collector( $name ) {
+			return in_array( $name, self::COLLECTORS );
+		}
+
+		public function disable_collector( $name ) {
+			if ( ! $this->is_collector( $name ) ) {
+				return false;
+			}
+
+			unset( $this->enabled_collectors[ $name ] );
+
+			if ( $name === self::COLLECTOR_HOOK ) {
+				$this->record_stop( $this->current_hook );
+			}
+
+			return true;
+		}
+
+		/**
+		 * @param $item
+		 */
+		private function record_stop( &$item ) {
+			$item ['stop']        = $this->time();
+			$item ['memory_stop'] = memory_get_usage();
+			$item ['time']        = $item['stop'] - $item['start'];
+			$item ['memory']      = $item ['memory_stop'] - $item ['memory_start'];
+			$item['human_time']   = sprintf( '%f', $item['time'] );
+		}
+
 		/**
 		 *
 		 */
 		public function start_timer() {
-			if ( $this->disabled ) {
+			if ( ! $this->is_collector_enabled( self::COLLECTOR_HOOK ) ) {
 				return;
 			}
 
@@ -131,9 +195,10 @@ namespace pcfreak30 {
 				return;
 			}
 
-			$this->maybe_inject_hook( $action );
-
-			$this->inject_function_timers( $action );
+			if ( $this->is_collector_enabled( self::COLLECTOR_FUNCTION ) ) {
+				$this->maybe_inject_hook( $action );
+				$this->inject_function_timers( $action );
+			}
 
 			$this->current_hook['children'][] = $this->record();
 			$this->maybe_change_current_hook();
@@ -197,7 +262,7 @@ namespace pcfreak30 {
 		public function stop_timer( $data = null ) {
 			$action   = current_action();
 			$shutdown = 'shutdown' === $action;
-			if ( $this->disabled && ! $shutdown ) {
+			if ( $this->is_collector_enabled( self::COLLECTOR_HOOK ) && ! $shutdown ) {
 				return $data;
 			}
 			$this->record_end();
@@ -220,17 +285,6 @@ namespace pcfreak30 {
 				remove_action( $action, [ $this, 'stop_timer' ], PHP_INT_MAX );
 			}
 			$this->record_stop( $this->current_hook );
-		}
-
-		/**
-		 * @param $item
-		 */
-		private function record_stop( &$item ) {
-			$item ['stop']        = $this->time();
-			$item ['memory_stop'] = memory_get_usage();
-			$item ['time']        = $item['stop'] - $item['start'];
-			$item ['memory']      = $item ['memory_stop'] - $item ['memory_start'];
-			$item['human_time']   = sprintf( '%f', $item['time'] );
 		}
 
 		/**
@@ -265,7 +319,7 @@ namespace pcfreak30 {
 		 *
 		 */
 		private function add_default_meta() {
-			if ( did_action( 'parse_query' ) ) {
+			if ( did_action( 'parse_query' ) && $this->is_collector_enabled( self::COLLECTOR_QUERY ) ) {
 				$query   = $GLOBALS['wp_the_query'];
 				$methods = get_class_methods( $query );
 				$methods = array_filter( $methods, function ( $method ) {
@@ -278,11 +332,11 @@ namespace pcfreak30 {
 				$this->add_meta( 'query', $meta );
 			}
 
-			if ( did_action( 'parse_request' ) ) {
+			if ( did_action( 'parse_request' ) && $this->is_collector_enabled( self::COLLECTOR_REQUEST ) ) {
 				$this->add_meta( 'request', $GLOBALS['wp']->query_vars );
 			}
 
-			if ( defined( 'SAVEQUERIES' ) && SAVEQUERIES ) {
+			if ( ( defined( 'SAVEQUERIES' ) && SAVEQUERIES ) && $this->is_collector_enabled( self::COLLECTOR_DB ) ) {
 				$this->add_db_meta();
 			}
 		}
@@ -403,15 +457,6 @@ namespace pcfreak30 {
 		}
 
 		/**
-		 * @param bool $function_tracing
-		 *
-		 * @noinspection PhpUnused
-		 */
-		public function set_function_tracing( $function_tracing ) {
-			$this->function_tracing = (bool) $function_tracing;
-		}
-
-		/**
 		 * @return \pcfreak30\WordPress_Profiler\ReporterInterface
 		 * @noinspection PhpUnused
 		 */
@@ -436,10 +481,6 @@ namespace pcfreak30 {
 		/**
 		 *
 		 */
-		public function set_disabled() {
-			$this->disabled = true;
-			$this->record_stop( $this->data );
-		}
 
 		/**
 		 * @return bool
@@ -945,6 +986,9 @@ namespace pcfreak30\WordPress_Profiler {
 			$instance = new WordPress_Profiler();
 			$instance->set_report_handler( new FileSystemReporter() );
 			$instance->init();
+			foreach ( WordPress_Profiler::COLLECTORS as $collector ) {
+				profiler()->enable_collector( $collector );
+			}
 		}
 
 		return $instance;
