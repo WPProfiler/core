@@ -63,8 +63,8 @@ namespace pcfreak30 {
 		public function init() {
 			add_action( 'all', [ $this, 'start_timer' ] );
 			add_action( 'shutdown', '__return_true', PHP_INT_MAX );
-			$this->data           = $this->record( true );
-			$this->current_hook   = &$this->data;
+			$this->data         = $this->record( true );
+			$this->current_hook = &$this->data;
 		}
 
 		/**
@@ -265,20 +265,23 @@ namespace pcfreak30 {
 		 *
 		 */
 		private function add_default_meta() {
-			$query   = $GLOBALS['wp_the_query'];
-			$methods = get_class_methods( $query );
-			$methods = array_filter( $methods, function ( $method ) {
-				return 0 === strpos( $method, 'is_' ) && ! in_array( $method, [ 'is_comments_popup' ] );
-			} );
-			$meta    = [];
-			foreach ( $methods as $method ) {
-				$meta[ $method ] = $query->{$method}();
+			if ( did_action( 'parse_query' ) ) {
+				$query   = $GLOBALS['wp_the_query'];
+				$methods = get_class_methods( $query );
+				$methods = array_filter( $methods, function ( $method ) {
+					return 0 === strpos( $method, 'is_' ) && ! in_array( $method, [ 'is_comments_popup' ] );
+				} );
+				$meta    = [];
+				foreach ( $methods as $method ) {
+					$meta[ $method ] = $query->{$method}();
+				}
+				$this->add_meta( 'query', $meta );
 			}
-			$this->add_meta( 'query', $meta );
 
 			if ( defined( 'SAVEQUERIES' ) && SAVEQUERIES ) {
 				$this->add_meta( 'db', $GLOBALS['wpdb']->queries );
 			}
+
 		}
 
 		/**
