@@ -48,6 +48,11 @@ namespace pcfreak30 {
 		private $disabled = false;
 
 		/**
+		 * @var bool
+		 */
+		private $reporting = true;
+
+		/**
 		 *
 		 */
 		public function init() {
@@ -230,6 +235,11 @@ namespace pcfreak30 {
 		private function save_report() {
 			$time = time();
 			remove_action( 'all', [ $this, 'start_timer' ] );
+
+			if ( ! $this->reporting ) {
+				return;
+			}
+
 			/** @var Hook $sanitize_title */
 			$sanitize_title = $GLOBALS['wp_filter']['sanitize_title'];
 			$sanitize_title->remove_function_hooks();
@@ -365,6 +375,20 @@ namespace pcfreak30 {
 		 */
 		public function set_disabled() {
 			$this->disabled = true;
+		}
+
+		/**
+		 * @return bool
+		 */
+		public function is_reporting() {
+			return $this->reporting;
+		}
+
+		/**
+		 * @param bool $reporting
+		 */
+		public function set_reporting( $reporting ) {
+			$this->reporting = (bool) $reporting;
 		}
 	}
 }
