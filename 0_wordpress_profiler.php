@@ -16,13 +16,37 @@ namespace pcfreak30 {
 	 */
 	class WordPress_Profiler {
 
+		/**
+		 * Hook Collector
+		 */
 		const COLLECTOR_HOOK = 'hook';
+		/**
+		 * Function Collector
+		 */
 		const COLLECTOR_FUNCTION = 'function';
+		/**
+		 * Function Trace Collector
+		 */
 		const COLLECTOR_FUNCTION_TRACE = 'function_trace';
+		/**
+		 * Query Collector
+		 */
 		const COLLECTOR_QUERY = 'query';
+		/**
+		 * WP Data Collector
+		 */
 		const COLLECTOR_WP = 'wp';
+		/**
+		 * Request Collector
+		 */
 		const COLLECTOR_REQUEST = 'request';
+		/**
+		 * DB Collector
+		 */
 		const COLLECTOR_DB = 'db';
+		/**
+		 *
+		 */
 		const COLLECTORS = [
 			self::COLLECTOR_HOOK,
 			self::COLLECTOR_FUNCTION,
@@ -136,14 +160,27 @@ namespace pcfreak30 {
 			return microtime( true );
 		}
 
+		/**
+		 * @param $name
+		 *
+		 * @return bool
+		 */
 		public function is_collector_enabled( $name ) {
 			return isset( $this->enabled_collectors[ $name ] );
 		}
 
+		/**
+		 *
+		 */
 		public function disable_all_collectors() {
 			$this->enabled_collectors = [];
 		}
 
+		/**
+		 * @param $name
+		 *
+		 * @return bool
+		 */
 		public function enable_collector( $name ) {
 			if ( ! $this->is_collector( $name ) ) {
 				return false;
@@ -153,10 +190,20 @@ namespace pcfreak30 {
 			return true;
 		}
 
+		/**
+		 * @param $name
+		 *
+		 * @return bool
+		 */
 		public function is_collector( $name ) {
 			return in_array( $name, self::COLLECTORS );
 		}
 
+		/**
+		 * @param $name
+		 *
+		 * @return bool
+		 */
 		public function disable_collector( $name ) {
 			if ( ! $this->is_collector( $name ) ) {
 				return false;
@@ -349,6 +396,9 @@ namespace pcfreak30 {
 			$this->meta[ $key ] = $value;
 		}
 
+		/**
+		 *
+		 */
 		private function add_db_meta() {
 			$queries = &$GLOBALS['wpdb']->queries;
 			$meta    = [];
@@ -367,6 +417,9 @@ namespace pcfreak30 {
 			$this->add_meta( 'db', $meta );
 		}
 
+		/**
+		 * @return array
+		 */
 		public function generate_report() {
 			$report = &$this->data;
 			if ( ! doing_action( 'shutdown' ) ) {
@@ -986,7 +1039,7 @@ namespace pcfreak30\WordPress_Profiler {
 			$instance = new WordPress_Profiler();
 			$instance->set_report_handler( new FileSystemReporter() );
 			$instance->init();
-			foreach ( WordPress_Profiler::COLLECTORS as $collector ) {
+			foreach ( array_diff( WordPress_Profiler::COLLECTORS, [ WordPress_Profiler::COLLECTOR_FUNCTION_TRACE ] ) as $collector ) {
 				profiler()->enable_collector( $collector );
 			}
 		}
