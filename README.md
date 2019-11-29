@@ -23,7 +23,7 @@ A drop-in hook profiler (actions/filters) for WordPress in the form of a MU (Mus
 
 # Enabling function tracing
 
-Function tracing for hooks is off by default due to the possible performance hit of using `debug_backtrace()`. If you wish to use it, turn the `ENABLE_FUNCTION_TRACING` constant flag to `true` at the top.
+Function tracing for hooks is off by default due to the possible performance hit of using `debug_backtrace()`. If you wish to use it, call `profiler()->set_function_tracing(true)`.
 
 
 # Example hook recording
