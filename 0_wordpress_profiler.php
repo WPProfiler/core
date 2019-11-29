@@ -276,6 +276,10 @@ namespace pcfreak30 {
 				$meta[ $method ] = $query->{$method}();
 			}
 			$this->add_meta( 'query', $meta );
+
+			if ( defined( 'SAVEQUERIES' ) && SAVEQUERIES ) {
+				$this->add_meta( 'db', $GLOBALS['wpdb']->queries );
+			}
 		}
 
 		/**
