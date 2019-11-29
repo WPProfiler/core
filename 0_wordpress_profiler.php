@@ -291,6 +291,13 @@ namespace pcfreak30 {
 		}
 
 		/**
+		 *
+		 */
+		private function add_default_meta() {
+
+		}
+
+		/**
 		 * @return array
 		 * @noinspection PhpUnused
 		 */
@@ -431,13 +438,6 @@ namespace pcfreak30 {
 		public function get_meta( $key ) {
 			return $this->meta[ $key ];
 		}
-
-		/**
-		 *
-		 */
-		private function add_default_meta() {
-
-		}
 	}
 }
 
@@ -448,10 +448,26 @@ namespace pcfreak30\WordPress_Profiler {
 	use RuntimeException;
 	use WP_Hook;
 
+	/**
+	 * Interface ReporterInterface
+	 *
+	 * @package pcfreak30\WordPress_Profiler
+	 */
 	interface ReporterInterface {
+		/**
+		 * @param string $filename
+		 * @param array  $data
+		 *
+		 * @return mixed
+		 */
 		public function execute( $filename, array $data );
 	}
 
+	/**
+	 * Class FileSystemReporter
+	 *
+	 * @package pcfreak30\WordPress_Profiler
+	 */
 	class FileSystemReporter implements ReporterInterface {
 		/** @noinspection PhpUnused */
 		public function execute( $filename, array $data ) {
