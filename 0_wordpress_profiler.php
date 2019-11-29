@@ -15,7 +15,7 @@ namespace pcfreak30 {
 	 * @version 0.1.0
 	 */
 	class WordPress_Profiler {
-		/*
+		/**
 		 * Add version identifier
 		 */
 		const VERSION = '0.1.0';
@@ -51,6 +51,11 @@ namespace pcfreak30 {
 		 * @var bool
 		 */
 		private $reporting = true;
+
+		/**
+		 * @var array
+		 */
+		private $meta = [];
 
 		/**
 		 *
@@ -252,6 +257,7 @@ namespace pcfreak30 {
 			$filename = $this->data ['time'] . '-' . $path . '-' . $_SERVER['REQUEST_METHOD'] . '-' . time() . '.json';
 
 			$this->sanitize_data();
+			$this->add_default_meta();
 
 			$data = [
 				'server'    => $_SERVER['HTTP_HOST'],
@@ -260,6 +266,7 @@ namespace pcfreak30 {
 				'method'    => $_SERVER['REQUEST_METHOD'],
 				'referer'   => isset( $_SERVER['HTTP_REFERER'] ) ? $_SERVER['HTTP_REFERER'] : null,
 				'recording' => $this->data,
+				'meta'      => $this->meta,
 			];
 
 			if ( $this->report_handler instanceof ReporterInterface ) {
@@ -390,6 +397,46 @@ namespace pcfreak30 {
 		 */
 		public function set_reporting( $reporting ) {
 			$this->reporting = (bool) $reporting;
+		}
+
+		/**
+		 * @param string $key
+		 * @param string $value
+		 */
+		public function add_meta( $key, $value ) {
+			$this->meta[ $key ] = $value;
+		}
+
+		/**
+		 * @param string $key
+		 *
+		 * @return bool
+		 */
+		public function meta_exists( $key ) {
+			return isset( $this->meta[ $key ] );
+		}
+
+		/**
+		 * @return array
+		 */
+		public function get_all_meta() {
+			return $this->meta;
+		}
+
+		/**
+		 * @param string $key
+		 *
+		 * @return mixed
+		 */
+		public function get_meta( $key ) {
+			return $this->meta[ $key ];
+		}
+
+		/**
+		 *
+		 */
+		private function add_default_meta() {
+
 		}
 	}
 }
