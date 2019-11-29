@@ -15,6 +15,10 @@ namespace pcfreak30 {
 	 * @version 0.1.0
 	 */
 	class WordPress_Profiler {
+		/*
+		 * Add version identifier
+		 */
+		const VERSION = '0.1.0';
 		/**
 		 * @var array
 		 */
@@ -254,18 +258,6 @@ namespace pcfreak30 {
 		}
 
 		/**
-		 * @param $filename
-		 * @param $data
-		 */
-		private function do_save( $filename, $data ) {
-			$dir = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'profiler';
-			if ( ! @mkdir( $dir ) && ! @is_dir( $dir ) ) {
-				throw new RuntimeException( sprintf( 'Directory "%s" was not created', $dir ) );
-			}
-			file_put_contents( $dir . DIRECTORY_SEPARATOR . $filename, $data );
-		}
-
-		/**
 		 * @return array
 		 */
 		public function get_current_hook() {
@@ -332,6 +324,18 @@ namespace pcfreak30 {
 		 */
 		public function set_report_handler( callable $report_handler ) {
 			$this->report_handler = $report_handler;
+		}
+
+		/**
+		 * @param $filename
+		 * @param $data
+		 */
+		private function do_save( $filename, $data ) {
+			$dir = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'profiler';
+			if ( ! @mkdir( $dir ) && ! @is_dir( $dir ) ) {
+				throw new RuntimeException( sprintf( 'Directory "%s" was not created', $dir ) );
+			}
+			file_put_contents( $dir . DIRECTORY_SEPARATOR . $filename, $data );
 		}
 	}
 }
