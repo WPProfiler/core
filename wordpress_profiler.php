@@ -34,13 +34,19 @@ namespace pcfreak30 {
 		private $function_tracing = false;
 
 		/**
+		 * @var
+		 */
+		private $report_handler;
+
+		/**
 		 *
 		 */
 		public function init() {
 			add_action( 'all', [ $this, 'start_timer' ] );
 			add_action( 'shutdown', '__return_true', PHP_INT_MAX );
-			$this->data         = $this->record( true );
-			$this->current_hook = &$this->data;
+			$this->data           = $this->record( true );
+			$this->current_hook   = &$this->data;
+			$this->report_handler = [ $this, 'do_save' ];
 		}
 
 		/**
@@ -226,9 +232,9 @@ namespace pcfreak30 {
 				'recording' => $this->data,
 			], JSON_PRETTY_PRINT );
 
-			$this->do_save( $filename, $data );
-
-
+			if ( is_callable( $this->report_handler ) ) {
+				call_user_func( $this->report_handler, $filename, $data );
+			}
 		}
 
 		/**
@@ -312,6 +318,20 @@ namespace pcfreak30 {
 		 */
 		public function set_function_tracing( $function_tracing ) {
 			$this->function_tracing = $function_tracing;
+		}
+
+		/**
+		 * @return mixed
+		 */
+		public function get_report_handler() {
+			return $this->report_handler;
+		}
+
+		/**
+		 * @param mixed $report_handler
+		 */
+		public function set_report_handler( $report_handler ) {
+			$this->report_handler = $report_handler;
 		}
 	}
 }
