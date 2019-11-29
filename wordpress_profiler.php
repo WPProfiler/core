@@ -3,9 +3,9 @@
 namespace pcfreak30 {
 
 	use pcfreak30\WordPress_Profiler\Hook;
+	use pcfreak30\WordPress_Profiler\ReporterInterface;
 	use ReflectionFunction;
 	use ReflectionMethod;
-	use RuntimeException;
 
 	/**
 	 * Class WordPress_Profiler
@@ -38,7 +38,7 @@ namespace pcfreak30 {
 		private $function_tracing = false;
 
 		/**
-		 * @var
+		 * @var \pcfreak30\WordPress_Profiler\ReporterInterface
 		 */
 		private $report_handler;
 
@@ -227,17 +227,17 @@ namespace pcfreak30 {
 
 			$this->sanitize_data();
 
-			$data = wp_json_encode( [
+			$data = [
 				'server'    => $_SERVER['HTTP_HOST'],
 				'url'       => ! empty( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '/',
 				'timestamp' => $time,
 				'method'    => $_SERVER['REQUEST_METHOD'],
 				'referer'   => isset( $_SERVER['HTTP_REFERER'] ) ? $_SERVER['HTTP_REFERER'] : null,
 				'recording' => $this->data,
-			], JSON_PRETTY_PRINT );
+			];
 
-			if ( is_callable( $this->report_handler ) ) {
-				call_user_func( $this->report_handler, $filename, $data );
+			if ( $this->report_handler instanceof ReporterInterface ) {
+				$this->report_handler->execute( $filename, $data );
 			}
 		}
 
@@ -320,22 +320,10 @@ namespace pcfreak30 {
 		}
 
 		/**
-		 * @param callable $report_handler
+		 * @param \pcfreak30\WordPress_Profiler\ReporterInterface $report_handler
 		 */
-		public function set_report_handler( callable $report_handler ) {
+		public function set_report_handler( ReporterInterface $report_handler ) {
 			$this->report_handler = $report_handler;
-		}
-
-		/**
-		 * @param $filename
-		 * @param $data
-		 */
-		private function do_save( $filename, $data ) {
-			$dir = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'profiler';
-			if ( ! @mkdir( $dir ) && ! @is_dir( $dir ) ) {
-				throw new RuntimeException( sprintf( 'Directory "%s" was not created', $dir ) );
-			}
-			file_put_contents( $dir . DIRECTORY_SEPARATOR . $filename, $data );
 		}
 	}
 }
@@ -344,7 +332,22 @@ namespace pcfreak30\WordPress_Profiler {
 
 	use ArrayAccess;
 	use Iterator;
+	use RuntimeException;
 	use WP_Hook;
+
+	interface ReporterInterface {
+		public function execute( $filename, array $data );
+	}
+
+	class FileSystemReporter implements ReporterInterface {
+		public function execute( $filename, array $data ) {
+			$dir = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'profiler';
+			if ( ! @mkdir( $dir ) && ! @is_dir( $dir ) ) {
+				throw new RuntimeException( sprintf( 'Directory "%s" was not created', $dir ) );
+			}
+			file_put_contents( $dir . DIRECTORY_SEPARATOR . $filename, wp_json_encode( $data, JSON_PRETTY_PRINT ) );
+		}
+	}
 
 	/**
 	 * Class Hook
@@ -746,6 +749,7 @@ namespace pcfreak30\WordPress_Profiler {
 
 		if ( ! $instance ) {
 			$instance = new WordPress_Profiler();
+			$instance->set_report_handler( new FileSystemReporter() );
 			$instance->init();
 		}
 
