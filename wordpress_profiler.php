@@ -16,10 +16,6 @@ namespace pcfreak30 {
 	 */
 	class WordPress_Profiler {
 		/**
-		 * Enable tracing of where a hook was called from
-		 */
-		const ENABLE_FUNCTION_TRACING = false;
-		/**
 		 * @var array
 		 */
 		private $data = [];
