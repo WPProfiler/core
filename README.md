@@ -144,3 +144,7 @@ class MyCollector implements CollectorInterface {
 wp_profiler()->register_collector('my_collector', new MyCollector(wp_profiler()));
 wp_profiler()->enable_collector('my_collector');
 ```
+
+# API Documentation
+
+See generated docs at [apidocs.wpprofiler.org](https://apidocs.wpprofiler.org)
