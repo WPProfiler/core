@@ -1,5 +1,5 @@
 # WordPress Profiler
-A drop-in hook profiler (actions/filters) for WordPress in the form of a MU (Must Use) plugin
+A drop-in profiler for WordPress in the form of a MU (Must Use) plugin
 
 # Instructions
 
