@@ -313,7 +313,7 @@ namespace pcfreak30 {
 		}
 
 		/**
-		 * @return callable
+		 * @return \pcfreak30\WordPress_Profiler\ReporterInterface
 		 */
 		public function get_report_handler() {
 			return $this->report_handler;
