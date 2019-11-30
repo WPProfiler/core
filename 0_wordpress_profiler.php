@@ -181,7 +181,7 @@ namespace WPProfiler\Core {
 
 		/**
 		 * @param string $key
-		 * @param array  $value
+		 * @param mixed  $value
 		 */
 		public function add_meta( $key, $value ) {
 			$this->meta[ $key ] = $value;
