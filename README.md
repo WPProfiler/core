@@ -150,6 +150,14 @@ wp_profiler()->register_collector('my_collector', new MyCollector(wp_profiler())
 wp_profiler()->enable_collector('my_collector');
 ```
 
+# Adding custom meta to the report
+
+ If you don't want to create a full-fleged collector and just want to send an extra piece of info with the report, the meta API (not post/user/term in WP core) will do the job. Example:
+ 
+ ```php
+wp_profiler()->add_meta('operating_system','linux');
+```
+
 # API Documentation
 
 See generated docs at [apidocs.wpprofiler.org](https://apidocs.wpprofiler.org)
