@@ -55,6 +55,13 @@ namespace WPProfiler\Core {
 		}
 
 		/**
+		 * @return float
+		 */
+		public function time() {
+			return microtime( true );
+		}
+
+		/**
 		 * @param $name
 		 *
 		 * @return bool
