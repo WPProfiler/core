@@ -3,8 +3,8 @@ A drop-in profiler for WordPress in the form of a MU (Must Use) plugin
 
 # Links
 
-[ ![Github](https://img.shields.io/badge/GitHub-view-brightgreen) ](https://github.com/WPProfiler/core)
-[ ![Download](https://img.shields.io/badge/GitHub-download-blue) ](https://raw.githubusercontent.com/WPProfiler/core/master/0_wordpress_profiler.php)
+* [View](https://github.com/WPProfiler/core)
+* [Downloads](https://raw.githubusercontent.com/WPProfiler/core/master/0_wordpress_profiler.php)
 
 # Instructions
 
