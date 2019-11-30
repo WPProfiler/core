@@ -867,6 +867,11 @@ namespace WPProfiler\Core\Collectors {
 		private $data = [];
 
 		/**
+		 * @var array
+		 */
+		private $ignored_hooks;
+
+		/**
 		 * @param $parts
 		 *
 		 * @return mixed
@@ -953,7 +958,7 @@ namespace WPProfiler\Core\Collectors {
 		 */
 		public function start_timer() {
 			$action = current_action();
-			if ( ! has_action( $action ) ) {
+			if ( ! has_action( $action ) && $this->is_hook_ignored( $action ) ) {
 				return;
 			}
 
@@ -965,6 +970,17 @@ namespace WPProfiler\Core\Collectors {
 
 			add_action( $action, [ $this, 'stop_timer' ], PHP_INT_MAX );
 
+		}
+
+		/**
+		 * @param $hook
+		 *
+		 * @return bool
+		 */
+		public function is_hook_ignored( $hook ) {
+			$hook = (string) $hook;
+
+			return isset( $this->ignored_hooks[ $hook ] );
 		}
 
 		/**
@@ -1057,6 +1073,31 @@ namespace WPProfiler\Core\Collectors {
 		public function get_current_hook() {
 			return $this->current_hook;
 		}
+
+		/**
+		 * @param string $hook
+		 */
+		public function ignore_hook( $hook ) {
+			$hook                         = (string) $hook;
+			$this->ignored_hooks[ $hook ] = true;
+			remove_action( $hook, [ $this, 'stop_timer' ], PHP_INT_MAX );
+		}
+
+		/**
+		 * @param $hook
+		 *
+		 * @return bool
+		 */
+		public function remove_ignored_hook( $hook ) {
+			$hook = (string) $hook;
+			if ( $this->is_hook_ignored( $hook ) ) {
+				unset( $this->ignored_hooks[ $hook ] );
+
+				return true;
+			}
+
+			return false;
+		}
 	}
 
 	/**
@@ -1081,6 +1122,9 @@ namespace WPProfiler\Core\Collectors {
 		 */
 		private $current_hook;
 
+		/**
+		 * @var array
+		 */
 		private $ignored_functions = [];
 
 		/**
@@ -1229,10 +1273,18 @@ namespace WPProfiler\Core\Collectors {
 			$hook->maybe_inject_function_timer();
 		}
 
+		/**
+		 * @param callable $function
+		 */
 		public function ignore_function( callable $function ) {
 			$this->ignored_functions[ _wp_filter_build_unique_id( null, $function, null ) ] = true;
 		}
 
+		/**
+		 * @param callable $function
+		 *
+		 * @return bool
+		 */
 		public function remove_ignored_function( callable $function ) {
 			if ( $this->is_function_ignored( $function ) ) {
 				unset( $this->ignored_functions[ _wp_filter_build_unique_id( null, $function, null ) ] );
@@ -1243,6 +1295,11 @@ namespace WPProfiler\Core\Collectors {
 			return false;
 		}
 
+		/**
+		 * @param callable $function
+		 *
+		 * @return bool
+		 */
 		public function is_function_ignored( callable $function ) {
 			return isset( $this->ignored_functions[ _wp_filter_build_unique_id( null, $function, null ) ] );
 		}
