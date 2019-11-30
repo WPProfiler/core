@@ -447,8 +447,8 @@ namespace WPProfiler\Core {
 			$dir      .= $type;
 			$dir      = apply_filters( 'wp_profiler_report_storage_directory', $dir );
 			$filename = apply_filters( 'wp_profiler_report_filename', $filename );
-			if ( ! @mkdir( $dir ) && ! @is_dir( $dir ) ) {
-				throw new RuntimeException( sprintf( 'Directory "%s" was not created', $dir ) );
+			if ( ! @mkdir( $dir, 0777, true ) && ! @is_dir( $dir ) ) {
+				error_log( sprintf( 'WP Profiler: Could not save report as Directory "%s" could not be created', $dir ) );
 			}
 			file_put_contents( $dir . DIRECTORY_SEPARATOR . $filename, wp_json_encode( $data, JSON_PRETTY_PRINT ) );
 		}
