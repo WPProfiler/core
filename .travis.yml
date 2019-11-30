@@ -19,3 +19,4 @@ deploy:
   github_token: $github_token
   on:
     branch: master
+  fqdn: apidocs.wpprofile.org
