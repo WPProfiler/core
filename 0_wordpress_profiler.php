@@ -1197,11 +1197,6 @@ namespace WPProfiler\Core\Collectors {
 		 * @return array
 		 */
 		public function build_report_filename( $parts ) {
-			/** @var \WPProfiler\Core\Hook $sanitize_title */
-			$sanitize_title = $GLOBALS['wp_filter']['sanitize_title'];
-			if ( $sanitize_title instanceof Core\Hook ) {
-				$sanitize_title->remove_function_hooks();
-			}
 
 			$path = sanitize_title( $_SERVER['REQUEST_URI'] );
 			if ( empty( $path ) ) {
