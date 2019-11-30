@@ -42,10 +42,16 @@ namespace WPProfiler\Core {
 		private $report_saved = false;
 
 		/**
+		 * @var float
+		 */
+		private $time_started = 0;
+
+		/**
 		 *
 		 */
 		public function init() {
 			register_shutdown_function( [ $this, 'save_report' ] );
+			$this->time_started = $this->time();
 		}
 
 		/**
@@ -167,7 +173,7 @@ namespace WPProfiler\Core {
 		}
 
 		/**
-		 * @return float|string
+		 * @return float
 		 */
 		public function time() {
 			return microtime( true );
@@ -220,7 +226,7 @@ namespace WPProfiler\Core {
 
 			$collected_data = array_filter( $collected_data );
 
-			$time        = $this->time();
+			$time        = $this->time() - $this->time_started;
 			$memory      = memory_get_usage();
 			$peak_memory = memory_get_peak_usage();
 
