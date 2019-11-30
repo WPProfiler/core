@@ -180,13 +180,6 @@ namespace WPProfiler\Core {
 		}
 
 		/**
-		 * @return float
-		 */
-		public function time() {
-			return microtime( true );
-		}
-
-		/**
 		 * @param string $key
 		 * @param array  $value
 		 */
