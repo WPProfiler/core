@@ -443,8 +443,9 @@ namespace WPProfiler\Core {
 			if ( $data['is_ajax'] ) {
 				$type = 'ajax';
 			}
-			$dir .= $type;
-			$dir = apply_filters( 'wp_profiler_report_storage_directory', $dir );
+			$dir      .= $type;
+			$dir      = apply_filters( 'wp_profiler_report_storage_directory', $dir );
+			$filename = apply_filters( 'wp_profiler_report_filename', $filename );
 			if ( ! @mkdir( $dir ) && ! @is_dir( $dir ) ) {
 				throw new RuntimeException( sprintf( 'Directory "%s" was not created', $dir ) );
 			}
