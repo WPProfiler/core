@@ -231,7 +231,7 @@ namespace WPProfiler\Core {
 			$peak_memory = memory_get_peak_usage();
 
 			return array_filter( [
-				'server'           => $_SERVER['HTTP_HOST'],
+				'server'           => isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : null,
 				'url'              => ! empty( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '/',
 				'timestamp'        => time(),
 				'method'           => $_SERVER['REQUEST_METHOD'],
