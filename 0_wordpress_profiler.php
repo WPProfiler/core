@@ -30,10 +30,12 @@ namespace WPProfiler\Core {
 		 * @var array
 		 */
 		private $enabled_collectors = [];
+
 		/**
 		 * @var CollectorInterface[]
 		 */
 		private $collectors = [];
+
 		/**
 		 * @var bool
 		 */
@@ -292,7 +294,7 @@ namespace WPProfiler\Core {
 		/**
 		 * CollectorInterface constructor.
 		 *
-		 * @param \WPProfiler\Profiler $profiler
+		 * @param \WPProfiler\Core\Profiler $profiler
 		 */
 		public function __construct( Profiler $profiler );
 
@@ -353,7 +355,7 @@ namespace WPProfiler\Core {
 		/**
 		 * CollectorAbstract constructor.
 		 *
-		 * @param \WPProfiler\Profiler $profiler
+		 * @param \WPProfiler\Core\Profiler $profiler
 		 */
 		public function __construct( Profiler $profiler ) {
 			$this->profiler = $profiler;
@@ -718,7 +720,6 @@ namespace WPProfiler\Core {
 				$pointer = reset( $hook );
 			}
 
-			/** @noinspection PhpUndefinedVariableInspection */
 			return $pointer ?: current( $hook );
 		}
 
@@ -1059,6 +1060,7 @@ namespace WPProfiler\Core\Collectors {
 	 * @package WPProfiler\Core\Collectors
 	 */
 	class Function_ extends Core\CollectorAbstract {
+
 		/**
 		 *
 		 */
@@ -1070,7 +1072,7 @@ namespace WPProfiler\Core\Collectors {
 		const BUILD_FILENAME_PRIORITY = 0;
 
 		/**
-		 * @var
+		 * @var array
 		 */
 		private $current_hook;
 
