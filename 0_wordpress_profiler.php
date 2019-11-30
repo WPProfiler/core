@@ -961,7 +961,6 @@ namespace WPProfiler\Core\Collectors {
 			$this->profiler->call_collector( Function_::NAME, 'inject_timers', $action );
 
 			$this->current_hook['children'][] = $this->record();
-			//	$this->current_hook['children'][ count( $this->current_hook['children'] ) - 1 ]['index'] = count( $this->current_hook['children'] ) - 1;
 			$this->maybe_change_current_hook();
 
 			add_action( $action, [ $this, 'stop_timer' ], PHP_INT_MAX );
