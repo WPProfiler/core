@@ -234,9 +234,15 @@ namespace WPProfiler\Core {
 				'total_human_time' => sprintf( '%f', $time ),
 				'memory_used'      => $memory,
 				'peak_memory_used' => $peak_memory,
+				'is_cron'          => wp_doing_cron(),
+				'is_ajax'          => wp_doing_ajax(),
+				'is_cli'           => php_sapi_name() === 'cli' ? true : null,
+				'wp_cli_command'   => class_exists( '\WP_CLI' ) ? implode( ' ', array_slice( $_SERVER['argv'], 1 ) ) : null,
 				'collectors'       => $collected_data,
 				'meta'             => $this->meta,
-			] );
+			], function ( $item ) {
+				return null !== $item;
+			} );
 		}
 
 		/**
