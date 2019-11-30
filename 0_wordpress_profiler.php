@@ -436,10 +436,6 @@ namespace WPProfiler\Core {
 		private $stop_cb;
 
 		/**
-		 * @var bool
-		 */
-		private $foreach_copy;
-		/**
 		 * @var Profiler
 		 */
 		private $profiler;
@@ -461,13 +457,12 @@ namespace WPProfiler\Core {
 		 * @noinspection PhpUnused
 		 */
 		public function __construct( WP_Hook $hook, $hook_name, Profiler $profiler, Function_ $collector ) {
-			$this->hook         = $hook;
-			$this->hook_name    = $hook_name;
-			$this->start_cb     = [ $this, 'start_function_timer' ];
-			$this->stop_cb      = [ $this, 'stop_function_timer' ];
-			$this->foreach_copy = version_compare( PHP_VERSION, '5.6.0' ) >= 0;
-			$this->profiler     = $profiler;
-			$this->collector    = $collector;
+			$this->hook      = $hook;
+			$this->hook_name = $hook_name;
+			$this->start_cb  = [ $this, 'start_function_timer' ];
+			$this->stop_cb   = [ $this, 'stop_function_timer' ];
+			$this->profiler  = $profiler;
+			$this->collector = $collector;
 		}
 
 		/**
@@ -714,15 +709,13 @@ namespace WPProfiler\Core {
 		 * @return mixed
 		 */
 		private function advance_hook( $end = false ) {
-			$hook = &$this->hook->callbacks[ $this->hook->current_priority() ];
-			if ( $this->foreach_copy ) {
+			$hook    = &$this->hook->callbacks[ $this->hook->current_priority() ];
+			$pointer = next( $hook );
+			if ( $end ) {
 				$pointer = next( $hook );
-				if ( $end ) {
-					$pointer = next( $hook );
-				}
-				if ( ! $pointer ) {
-					$pointer = reset( $hook );
-				}
+			}
+			if ( ! $pointer ) {
+				$pointer = reset( $hook );
 			}
 
 			/** @noinspection PhpUndefinedVariableInspection */
@@ -1501,6 +1494,9 @@ namespace WPProfiler\Core {
 			foreach ( $collectors as $collector ) {
 				$name = constant( "{$collector}::NAME" );
 				$instance->register_collector( constant( "{$collector}::NAME" ), new $collector( $instance ) );
+				if ( $name === Collectors\Function_::NAME && 0 >= version_compare( PHP_VERSION, '7.0' ) ) {
+					continue;
+				}
 				if ( $name === Collectors\FunctionTracer::NAME ) {
 					continue;
 				}
