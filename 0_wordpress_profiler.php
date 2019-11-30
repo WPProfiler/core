@@ -220,7 +220,9 @@ namespace WPProfiler\Core {
 
 			$collected_data = array_filter( $collected_data );
 
-			$time = $this->time();
+			$time        = $this->time();
+			$memory      = memory_get_usage();
+			$peak_memory = memory_get_peak_usage();
 
 			return array_filter( [
 				'server'           => $_SERVER['HTTP_HOST'],
@@ -230,6 +232,8 @@ namespace WPProfiler\Core {
 				'referer'          => isset( $_SERVER['HTTP_REFERER'] ) ? $_SERVER['HTTP_REFERER'] : null,
 				'total_time'       => $time,
 				'total_human_time' => sprintf( '%f', $time ),
+				'memory_used'      => $memory,
+				'peak_memory_used' => $peak_memory,
 				'collectors'       => $collected_data,
 				'meta'             => $this->meta,
 			] );
