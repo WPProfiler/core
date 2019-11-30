@@ -158,6 +158,44 @@ wp_profiler()->enable_collector('my_collector');
 wp_profiler()->add_meta('operating_system','linux');
 ```
 
+# How to ignore a function from functional profiling
+
+Use the ignore function API on the function collector. See example:
+
+```php
+use WPProfiler\Core\Collectors\Function_;
+
+function my_function() {
+
+}
+
+$my_function = function () {
+
+};
+
+class MyTest {
+	public static function my_static_function() {
+	}
+
+	public function my_function() {
+	}
+}
+
+$my_object = new MyTest();
+wp_profiler()->call_collector( Function_::NAME, 'ignore_function', 'my_function' );
+wp_profiler()->call_collector( Function_::NAME, 'ignore_function', $my_function );
+wp_profiler()->call_collector( Function_::NAME, 'ignore_function', [ 'MyTest', 'my_static_function' ] );
+wp_profiler()->call_collector( Function_::NAME, 'ignore_function', [ $my_object, 'my_function' ] );
+```
+
+# How to ignore a hook from profiling
+
+ ```php
+use WPProfiler\Core\Collectors\Hook;
+
+wp_profiler()->call_collector( Hook::NAME, 'ignore_hook', 'my_custom_hook' );
+```
+
 # API Documentation
 
 See generated docs at [apidocs.wpprofiler.org](https://apidocs.wpprofiler.org)
