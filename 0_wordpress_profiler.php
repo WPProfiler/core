@@ -220,14 +220,16 @@ namespace WPProfiler\Core {
 
 			$collected_data = array_filter( $collected_data );
 
+			$time = $this->time();
+
 			return array_filter( [
 				'server'           => $_SERVER['HTTP_HOST'],
 				'url'              => ! empty( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '/',
 				'timestamp'        => time(),
 				'method'           => $_SERVER['REQUEST_METHOD'],
 				'referer'          => isset( $_SERVER['HTTP_REFERER'] ) ? $_SERVER['HTTP_REFERER'] : null,
-				'total_time'       => isset( $collected_data['hook']['time'] ) ? $collected_data['hook']['time'] : null,
-				'total_human_time' => isset( $collected_data['hook']['human_time'] ) ? $collected_data['hook']['human_time'] : null,
+				'total_time'       => $time,
+				'total_human_time' => sprintf( '%f', $time ),
 				'collectors'       => $collected_data,
 				'meta'             => $this->meta,
 			] );
