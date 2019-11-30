@@ -1058,24 +1058,6 @@ namespace WPProfiler\Core\Collectors {
 		public function get_current_hook() {
 			return $this->current_hook;
 		}
-
-		public function ignore_function( callable $function ) {
-			$this->ignored_functions[ _wp_filter_build_unique_id( null, $function, null ) ] = true;
-		}
-
-		public function remove_ignored_function( callable $function ) {
-			if ( $this->is_function_ignored( $function ) ) {
-				unset( $this->ignored_functions[ _wp_filter_build_unique_id( null, $function, null ) ] );
-
-				return true;
-			}
-
-			return false;
-		}
-
-		public function is_function_ignored( callable $function ) {
-			return isset( $this->ignored_functions[ _wp_filter_build_unique_id( null, $function, null ) ] );
-		}
 	}
 
 	/**
