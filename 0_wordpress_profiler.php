@@ -236,6 +236,7 @@ namespace WPProfiler\Core {
 				'timestamp'        => time(),
 				'method'           => $_SERVER['REQUEST_METHOD'],
 				'referer'          => isset( $_SERVER['HTTP_REFERER'] ) ? $_SERVER['HTTP_REFERER'] : null,
+				'user_agent'       => isset( $_SERVER['HTTP_USER_AGENT'] ) ? $_SERVER['HTTP_USER_AGENT'] : null,
 				'total_time'       => $time,
 				'total_human_time' => sprintf( '%f', $time ),
 				'memory_used'      => $memory,
