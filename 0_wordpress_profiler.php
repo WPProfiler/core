@@ -359,6 +359,11 @@ namespace WPProfiler\Core {
 		protected $profiler;
 
 		/**
+		 * @var bool
+		 */
+		protected $enabled = false;
+
+		/**
 		 * CollectorAbstract constructor.
 		 *
 		 * @param \WPProfiler\Core\Profiler $profiler
@@ -387,13 +392,18 @@ namespace WPProfiler\Core {
 		}
 
 		/**
-		 *
+		 * @return void
 		 */
-
-		protected function is_enabled() {
-			return $this->profiler->is_collector_enabled( static::NAME );
+		public function enable() {
+			$this->enabled = true;
 		}
 
+		/**
+		 * @return void
+		 */
+		public function disable() {
+			$this->enabled = false;
+		}
 	}
 
 	/**
@@ -958,7 +968,7 @@ namespace WPProfiler\Core\Collectors {
 		 */
 		public function start_timer() {
 			$action = current_action();
-			if ( ! has_action( $action ) && $this->is_hook_ignored( $action ) ) {
+			if ( ! has_action( $action ) || $this->is_hook_ignored( $action ) || ! $this->enabled ) {
 				return;
 			}
 
@@ -1037,9 +1047,10 @@ namespace WPProfiler\Core\Collectors {
 		}
 
 		/**
-		 * @return mixed|void
+		 * @return void
 		 */
 		public function enable() {
+			parent::enable();
 			add_action( 'all', [ $this, 'start_timer' ] );
 		}
 
@@ -1047,6 +1058,7 @@ namespace WPProfiler\Core\Collectors {
 		 * @return mixed|void
 		 */
 		public function disable() {
+			parent::disable();
 			remove_filter( 'all', [ $this, 'start_timer' ] );
 			$this->record_stop( $this->current_hook );
 			$this->profiler->disable_collector( Function_::NAME );
@@ -1146,16 +1158,10 @@ namespace WPProfiler\Core\Collectors {
 		 * @return void
 		 */
 		public function enable() {
+			parent::enable();
 			if ( ! $this->profiler->is_collector_enabled( Hook::NAME ) ) {
 				$this->profiler->disable_collector( self::NAME );
 			}
-		}
-
-		/**
-		 * @return mixed|void
-		 */
-		public function disable() {
-
 		}
 
 		/**
@@ -1324,9 +1330,10 @@ namespace WPProfiler\Core\Collectors {
 		}
 
 		/**
-		 * @return mixed|void
+		 * @return void
 		 */
 		public function enable() {
+			parent::enable();
 			if ( ! $this->profiler->is_collector_enabled( Hook::NAME ) ) {
 				$this->profiler->disable_collector( self::NAME );
 			}
@@ -1407,20 +1414,6 @@ namespace WPProfiler\Core\Collectors {
 		/**
 		 * @return mixed|void
 		 */
-		public function enable() {
-			// noop
-		}
-
-		/**
-		 * @return mixed|void
-		 */
-		public function disable() {
-			// noop
-		}
-
-		/**
-		 * @return mixed|void
-		 */
 		public function start() {
 			// TODO: Implement start() method.
 		}
@@ -1455,20 +1448,6 @@ namespace WPProfiler\Core\Collectors {
 
 			return $GLOBALS['wp']->query_vars;
 
-		}
-
-		/**
-		 * @return mixed|void
-		 */
-		public function enable() {
-			// TODO: Implement enable() method.
-		}
-
-		/**
-		 * @return mixed|void
-		 */
-		public function disable() {
-			// TODO: Implement disable() method.
 		}
 
 		/**
@@ -1521,20 +1500,6 @@ namespace WPProfiler\Core\Collectors {
 			}
 
 			return $collected;
-		}
-
-		/**
-		 * @return mixed|void
-		 */
-		public function enable() {
-			// TODO: Implement enable() method.
-		}
-
-		/**
-		 * @return mixed|void
-		 */
-		public function disable() {
-			// TODO: Implement disable() method.
 		}
 
 		/**
