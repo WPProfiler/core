@@ -756,7 +756,7 @@ namespace WPProfiler\Core {
 		public function add_filter( $tag, $function_to_add, $priority, $accepted_args ) {
 			$stop_id = _wp_filter_build_unique_id( $this->hook_name, $this->stop_cb, $priority );
 
-			if ( is_array( $function_to_add ) && $function_to_add[0] instanceof CollectorInterface ) {
+			if ( ( is_array( $function_to_add ) && $function_to_add[0] instanceof CollectorInterface ) || $this->collector->is_function_ignored( $function_to_add ) ) {
 				return $this->hook->add_filter( $tag, $function_to_add, $priority, $accepted_args );
 			}
 
@@ -777,7 +777,7 @@ namespace WPProfiler\Core {
 		 * @noinspection PhpUnused
 		 */
 		public function remove_filter( $tag, $function_to_remove, $priority ) {
-			if ( is_array( $function_to_remove ) && $function_to_remove[0] instanceof CollectorInterface ) {
+			if ( ( is_array( $function_to_remove ) && $function_to_remove[0] instanceof CollectorInterface ) || $this->collector->is_function_ignored( $function_to_remove ) ) {
 				return $this->hook->remove_filter( $tag, $function_to_remove, $priority );
 			}
 
@@ -1052,6 +1052,24 @@ namespace WPProfiler\Core\Collectors {
 		public function get_current_hook() {
 			return $this->current_hook;
 		}
+
+		public function ignore_function( callable $function ) {
+			$this->ignored_functions[ _wp_filter_build_unique_id( null, $function, null ) ] = true;
+		}
+
+		public function remove_ignored_function( callable $function ) {
+			if ( $this->is_function_ignored( $function ) ) {
+				unset( $this->ignored_functions[ _wp_filter_build_unique_id( null, $function, null ) ] );
+
+				return true;
+			}
+
+			return false;
+		}
+
+		public function is_function_ignored( callable $function ) {
+			return isset( $this->ignored_functions[ _wp_filter_build_unique_id( null, $function, null ) ] );
+		}
 	}
 
 	/**
@@ -1075,6 +1093,8 @@ namespace WPProfiler\Core\Collectors {
 		 * @var array
 		 */
 		private $current_hook;
+
+		private $ignored_functions = [];
 
 		/**
 		 * @return void
@@ -1220,6 +1240,24 @@ namespace WPProfiler\Core\Collectors {
 			/** @var \WPProfiler\Core\Hook $hook */
 			$hook = $GLOBALS['wp_filter'][ $action ];
 			$hook->maybe_inject_function_timer();
+		}
+
+		public function ignore_function( callable $function ) {
+			$this->ignored_functions[ _wp_filter_build_unique_id( null, $function, null ) ] = true;
+		}
+
+		public function remove_ignored_function( callable $function ) {
+			if ( $this->is_function_ignored( $function ) ) {
+				unset( $this->ignored_functions[ _wp_filter_build_unique_id( null, $function, null ) ] );
+
+				return true;
+			}
+
+			return false;
+		}
+
+		public function is_function_ignored( callable $function ) {
+			return isset( $this->ignored_functions[ _wp_filter_build_unique_id( null, $function, null ) ] );
 		}
 	}
 
