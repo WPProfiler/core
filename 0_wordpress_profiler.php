@@ -1118,6 +1118,21 @@ namespace WPProfiler\Core\Collectors {
 			return $this->current_hook;
 		}
 
+		public function update_current_hook_last_element( $name, $value ) {
+			end( $this->current_hook[ $name ] );
+			$this->current_hook[ $name ] [ key( $this->current_hook[ $name ] ) ] = $value;
+		}
+
+		public function get_current_hook_last_element( $name ) {
+			end( $this->current_hook[ $name ] );
+
+			return $this->current_hook[ $name ] [ key( $this->current_hook[ $name ] ) ];
+		}
+
+		public function append_current_hook( $name, $value ) {
+			$this->current_hook[ $name ] [] = $value;
+		}
+
 		/**
 		 * @param string $hook
 		 */
