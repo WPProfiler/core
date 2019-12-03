@@ -182,6 +182,7 @@ class MyTest {
 }
 
 $my_object = new MyTest();
+wp_profiler()->call_collector( Function_::NAME, 'set_ignoring_enabled', true );
 wp_profiler()->call_collector( Function_::NAME, 'ignore_function', 'my_function' );
 wp_profiler()->call_collector( Function_::NAME, 'ignore_function', $my_function );
 wp_profiler()->call_collector( Function_::NAME, 'ignore_function', [ 'MyTest', 'my_static_function' ] );
