@@ -1324,7 +1324,7 @@ namespace WPProfiler\Core\Collectors {
 		/**
 		 * @param callable $function
 		 */
-		public function ignore_function( callable $function ) {
+		public function ignore_function( $function ) {
 			$this->ignored_functions[ _wp_filter_build_unique_id( null, $function, null ) ] = true;
 		}
 
@@ -1333,7 +1333,7 @@ namespace WPProfiler\Core\Collectors {
 		 *
 		 * @return bool
 		 */
-		public function remove_ignored_function( callable $function ) {
+		public function remove_ignored_function( $function ) {
 			if ( $this->is_function_ignored( $function ) ) {
 				unset( $this->ignored_functions[ _wp_filter_build_unique_id( null, $function, null ) ] );
 
@@ -1348,7 +1348,7 @@ namespace WPProfiler\Core\Collectors {
 		 *
 		 * @return bool
 		 */
-		public function is_function_ignored( callable $function ) {
+		public function is_function_ignored( $function ) {
 			return isset( $this->ignored_functions[ _wp_filter_build_unique_id( null, $function, null ) ] );
 		}
 	}
