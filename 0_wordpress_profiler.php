@@ -446,7 +446,7 @@ namespace WPProfiler\Core {
 			}
 			$dir      .= $type;
 			$dir      = apply_filters( 'wp_profiler_report_storage_directory', $dir );
-			$filename = apply_filters( 'wp_profiler_report_filename', $filename );
+			$filename = apply_filters( 'wp_profiler_reporter_filesystem_reporter_filename', $filename );
 			if ( ! @mkdir( $dir, 0777, true ) && ! @is_dir( $dir ) ) {
 				error_log( sprintf( 'WP Profiler: Could not save report as Directory "%s" could not be created', $dir ) );
 			}
