@@ -2,6 +2,73 @@
 
 namespace WPProfiler\Core {
 
+	use ArrayAccess;
+	use Iterator;
+	use WP_Hook;
+	use WPProfiler\Core\Collectors\Function_;
+
+	/**
+	 * Interface ReporterInterface
+	 *
+	 * @package WPProfiler\Core
+	 */
+	interface ReporterInterface {
+		/**
+		 * @param string $filename
+		 * @param array  $data
+		 *
+		 * @return mixed
+		 */
+		public function execute( $filename, array $data );
+	}
+
+	/**
+	 * Interface CollectorInterface
+	 *
+	 * @package WPProfiler\Core
+	 */
+	interface CollectorInterface {
+
+		/**
+		 * CollectorInterface constructor.
+		 *
+		 * @param \WPProfiler\Core\Profiler $profiler
+		 */
+		public function __construct( Profiler $profiler );
+
+		/**
+		 * @return mixed
+		 */
+		public function init();
+
+		/**
+		 * @param mixed|null $data
+		 *
+		 * @return array
+		 */
+		public function get( $data = null );
+
+		/**
+		 * @return mixed
+		 */
+		public function enable();
+
+		/**
+		 * @return mixed
+		 */
+		public function disable();
+
+		/**
+		 * @return mixed
+		 */
+		public function start();
+
+		/**
+		 * @return mixed
+		 */
+		public function stop();
+	}
+
 	/**
 	 * Class Core
 	 *
