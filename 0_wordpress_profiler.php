@@ -1696,9 +1696,6 @@ namespace WPProfiler\Core {
 			foreach ( $collectors as $collector ) {
 				$name = constant( "{$collector}::NAME" );
 				$instance->register_collector( constant( "{$collector}::NAME" ), new $collector( $instance ) );
-				if ( $name === Collectors\Function_::NAME && 0 >= version_compare( PHP_VERSION, '7.0' ) ) {
-					continue;
-				}
 				if ( $name === Collectors\FunctionTracer::NAME ) {
 					continue;
 				}
