@@ -345,77 +345,6 @@ namespace WPProfiler\Core {
 			return true;
 		}
 	}
-}
-
-namespace WPProfiler\Core {
-
-	use ArrayAccess;
-	use Iterator;
-	use RuntimeException;
-	use WP_Hook;
-	use WPProfiler\Core\Collectors\Function_;
-
-	/**
-	 * Interface ReporterInterface
-	 *
-	 * @package WPProfiler\Core
-	 */
-	interface ReporterInterface {
-		/**
-		 * @param string $filename
-		 * @param array  $data
-		 *
-		 * @return mixed
-		 */
-		public function execute( $filename, array $data );
-	}
-
-	/**
-	 * Interface CollectorInterface
-	 *
-	 * @package WPProfiler\Core
-	 */
-	interface CollectorInterface {
-
-		/**
-		 * CollectorInterface constructor.
-		 *
-		 * @param \WPProfiler\Core\Profiler $profiler
-		 */
-		public function __construct( Profiler $profiler );
-
-		/**
-		 * @return mixed
-		 */
-		public function init();
-
-		/**
-		 * @param mixed|null $data
-		 *
-		 * @return array
-		 */
-		public function get( $data = null );
-
-		/**
-		 * @return mixed
-		 */
-		public function enable();
-
-		/**
-		 * @return mixed
-		 */
-		public function disable();
-
-		/**
-		 * @return mixed
-		 */
-		public function start();
-
-		/**
-		 * @return mixed
-		 */
-		public function stop();
-	}
 
 	/**
 	 * Class CollectorAbstract
@@ -524,424 +453,503 @@ namespace WPProfiler\Core {
 	/**
 	 * Class Hook
 	 *
+	 * A modified copy of the WP_Hook Class
+	 *
 	 * @package WPProfiler
 	 */
 	class Hook implements Iterator, ArrayAccess {
 
 		/**
-		 * @var bool
+		 * Hook callbacks.
+		 *
+		 * @var array
 		 */
-		private $injected = false;
+		public $callbacks = array();
 
 		/**
-		 * @var \WP_Hook
+		 * The priority keys of actively running iterations of a hook.
+		 *
+		 * @var array
 		 */
-		private $hook;
+		private $iterations = array();
+
+		/**
+		 * The current priority of actively running iterations of a hook.
+		 *
+		 * @var array
+		 */
+		private $current_priority = array();
+
+		/**
+		 * Number of levels this hook can be recursively called.
+		 *
+		 * @var int
+		 */
+		private $nesting_level = 0;
+
+		/**
+		 * Flag for if we're current doing an action, rather than a filter.
+		 *
+		 * @var bool
+		 */
+		private $doing_action = false;
+
 		/**
 		 * @var string
 		 */
 		private $hook_name;
-
 		/**
-		 * @var array
-		 */
-		private $start_cb;
-
-		/**
-		 * @var array
-		 */
-		private $stop_cb;
-
-		/**
-		 * @var Profiler
-		 */
-		private $profiler;
-		/**
-		 * @var \WPProfiler\Core\Collectors\Function_
+		 * @var \WPProfiler\Core\Collectors\Hook
 		 */
 		private $collector;
 
 		/**
 		 * Hook constructor.
 		 *
-		 * @param \WP_Hook                                         $hook
-		 * @param                                                  $hook_name
-		 *
-		 * @param Profiler                                         $profiler
-		 *
-		 * @param                                                  $collector
-		 *
-		 * @noinspection PhpUnused
+		 * @param \WP_Hook                              $hook
+		 * @param string                                $hook_name
+		 * @param \WPProfiler\Core\Profiler             $profiler
+		 * @param \WPProfiler\Core\Collectors\Function_ $collector
 		 */
-		public function __construct( WP_Hook $hook, $hook_name, Profiler $profiler, Function_ $collector ) {
-			$this->hook      = $hook;
+		public function __construct( $hook_name, Function_ $collector ) {
+
 			$this->hook_name = $hook_name;
-			$this->start_cb  = [ $this, 'start_function_timer' ];
-			$this->stop_cb   = [ $this, 'stop_function_timer' ];
-			$this->profiler  = $profiler;
 			$this->collector = $collector;
 		}
 
 		/**
-		 * @param string $name
+		 * Normalizes filters set up before WordPress has initialized to WP_Hook objects.
 		 *
-		 * @return mixed
-		 * @noinspection PhpUnused
-		 */
-		public function __get( $name ) {
-			if ( property_exists( $this, $name ) ) {
-				return $this->{$name};
-			}
-
-			return $this->hook->{$name};
-		}
-
-		/**
-		 * @param string $name
-		 * @param mixed  $value
+		 * @param array $filters Filters to normalize.
 		 *
-		 * @noinspection PhpUnused
+		 * @return WP_Hook[] Array of normalized filters.
 		 */
-		public function __set( $name, $value ) {
-			if ( property_exists( $this, $name ) ) {
-				$this->{$name} = $value;
+		public static function build_preinitialized_hooks( $filters ) {
+			/** @var \WPProfiler\Core\Hook[] $normalized */
+			$normalized = [];
+			$profiler   = wp_profiler();
+			$collector  = $profiler->call_collector( Function_::NAME, 'get_self' );
 
-				return;
-			}
-			$this->hook->{$name} = $value;
-		}
+			foreach ( $filters as $tag => $callback_groups ) {
+				if ( is_object( $callback_groups ) && $callback_groups instanceof self ) {
+					$normalized[ $tag ] = $callback_groups;
+					continue;
+				}
+				$hook = new self( $tag, $collector );
 
-		/**
-		 * @param string $name
-		 *
-		 * @return bool
-		 * @noinspection PhpUnused
-		 */
-		public function __isset( $name ) {
-			if ( property_exists( $this, $name ) ) {
-				return true;
-			}
+				// Loop through callback groups.
+				foreach ( $callback_groups as $priority => $callbacks ) {
 
-			return property_exists( $this->hook, $name );
-		}
-
-		/**
-		 * @inheritDoc
-		 * @noinspection PhpUnused
-		 */
-		public function next() {
-			return $this->__call( __FUNCTION__, [] );
-		}
-
-		/**
-		 * @param string $name
-		 * @param array  $arguments
-		 *
-		 * @return mixed
-		 */
-		public function __call( $name, $arguments ) {
-			if ( method_exists( $this, $name ) ) {
-				return call_user_func_array( [ $this, $name ], $arguments );
-			}
-
-			return call_user_func_array( [ $this->hook, $name ], $arguments );
-		}
-
-		/**
-		 * @inheritDoc
-		 * @noinspection PhpUnused
-		 */
-		public function key() {
-			return $this->__call( __FUNCTION__, [] );
-		}
-
-		/**
-		 * @inheritDoc
-		 * @noinspection PhpUnused
-		 */
-		public function valid() {
-			return $this->__call( __FUNCTION__, [] );
-		}
-
-		/**
-		 * @inheritDoc
-		 * @noinspection PhpUnused
-		 */
-		public function rewind() {
-			return $this->__call( __FUNCTION__, [] );
-		}
-
-		/**
-		 * @inheritDoc
-		 * @noinspection PhpUnused
-		 */
-		public function offsetExists( $offset ) {
-			return $this->__call( __FUNCTION__, [ $offset ] );
-		}
-
-		/**
-		 * @inheritDoc
-		 * @noinspection PhpUnused
-		 */
-		public function offsetGet( $offset ) {
-			return $this->__call( __FUNCTION__, [ $offset ] );
-		}
-
-		/**
-		 * @inheritDoc
-		 * @noinspection PhpUnused
-		 */
-		public function offsetSet( $offset, $value ) {
-			return $this->__call( __FUNCTION__, [ $offset, $value ] );
-		}
-
-		/**
-		 * @inheritDoc
-		 * @noinspection PhpUnused
-		 */
-		public function offsetUnset( $offset ) {
-			return $this->__call( __FUNCTION__, [ $offset ] );
-		}
-
-		/**
-		 * @return bool
-		 * @noinspection PhpUnused
-		 */
-		public function is_injected() {
-			return $this->injected;
-		}
-
-		/**
-		 * @param bool $injected
-		 *
-		 * @noinspection PhpUnused
-		 */
-		public function set_injected( $injected ) {
-			$this->injected = $injected;
-		}
-
-		/**
-		 *
-		 */
-		public function maybe_inject_function_timer() {
-			if ( $this->injected ) {
-				return;
-			}
-			$this->inject_function_timer();
-			$this->injected = true;
-		}
-
-		/**
-		 * @param int[] $priority
-		 */
-		public function inject_function_timer( $priority = null ) {
-			if ( null === $priority ) {
-				$priority = array_keys( $this->hook->callbacks );
-			}
-
-			if ( null !== $priority ) {
-				$priority = (array) $priority;
-			}
-
-			$start_wrapper = $this->get_start_cb_wrapper();
-			$stop_wrapper  = $this->get_stop_cb_wrapper();
-
-			foreach ( $priority as $hook_priority ) {
-				$new_callbacks = [];
-
-				foreach ( $this->hook->callbacks[ $hook_priority ] as $function ) {
-					$is_collector = is_array( $function['function'] ) && $function['function'] instanceof CollectorInterface;
-					$start_id     = _wp_filter_build_unique_id( $this->hook_name, $this->start_cb, $hook_priority );
-					$stop_id      = _wp_filter_build_unique_id( $this->hook_name, $this->stop_cb, $hook_priority );
-					$function_id  = _wp_filter_build_unique_id( $this->hook_name, $function['function'], $hook_priority );
-
-					if ( ! $is_collector ) {
-						$this->append_array_unique( $new_callbacks, $start_id, $start_wrapper );
-					}
-					$new_callbacks[ $function_id ] = $function;
-					if ( ! $is_collector ) {
-						$this->append_array_unique( $new_callbacks, $stop_id, $stop_wrapper );
+					// Loop through callbacks.
+					foreach ( $callbacks as $cb ) {
+						$hook->add_filter( $tag, $cb['function'], $priority, $cb['accepted_args'] );
 					}
 				}
-				$this->hook->callbacks[ $hook_priority ] = $new_callbacks;
-			}
-		}
-
-		/**
-		 * @return array
-		 */
-		private function get_start_cb_wrapper() {
-			return $this->get_cb_wrapper( $this->start_cb );
-		}
-
-		/**
-		 * @param callable $cb
-		 *
-		 * @return array
-		 */
-		private function get_cb_wrapper( $cb ) {
-			return [ 'function' => $cb, 'accepted_args' => 1 ];
-		}
-
-		/**
-		 * @return array
-		 */
-		private function get_stop_cb_wrapper() {
-			return $this->get_cb_wrapper( $this->stop_cb );
-		}
-
-		/**
-		 * @param array  $array
-		 * @param string $key
-		 * @param array  $value
-		 *
-		 * @return string
-		 */
-		private function append_array_unique( &$array, $key, $value ) {
-			while ( isset( $array[ $key ] ) ) {
-				$key .= '_0';
-			}
-			$array[ $key ] = $value;
-
-			return $key;
-		}
-
-		/**
-		 * @param mixed|null $value
-		 *
-		 * @return mixed|null
-		 * @throws \ReflectionException
-		 * @noinspection PhpUnused
-		 *
-		 */
-		public function start_function_timer( $value = null ) {
-			$this->collector->start_timer( $this->advance_hook() );
-
-			return $value;
-		}
-
-		/**
-		 * @param bool $end
-		 *
-		 * @return mixed
-		 */
-		private function advance_hook( $end = false ) {
-			$hook    = &$this->hook->callbacks[ $this->hook->current_priority() ];
-			$pointer = next( $hook );
-			if ( $end ) {
-				$pointer = next( $hook );
-			}
-			if ( ! $pointer ) {
-				$pointer = reset( $hook );
+				$normalized[ $tag ] = $hook;
 			}
 
-			return $pointer ?: current( $hook );
+			return $normalized;
 		}
 
 		/**
-		 * @inheritDoc
-		 * @noinspection PhpUnused
-		 */
-		public function current() {
-			return $this->__call( __FUNCTION__, [] );
-		}
-
-		/**
-		 * @param null $value
+		 * Hooks a function or method to a specific filter action.
 		 *
-		 * @return mixed|null
-		 * @noinspection PhpUnused
-		 */
-		public function stop_function_timer( $value = null ) {
-			$this->advance_hook( true );
-			$this->collector->stop_timer();
-
-			return $value;
-		}
-
-		/**
-		 * @param string   $tag
-		 * @param callable $function_to_add
-		 * @param int      $priority
-		 * @param int      $accepted_args
-		 *
-		 * @return bool|void
-		 * @noinspection PhpUnused
+		 * @param string   $tag             The name of the filter to hook the $function_to_add callback to.
+		 * @param callable $function_to_add The callback to be run when the filter is applied.
+		 * @param int      $priority        The order in which the functions associated with a particular action
+		 *                                  are executed. Lower numbers correspond with earlier execution,
+		 *                                  and functions with the same priority are executed in the order
+		 *                                  in which they were added to the action.
+		 * @param int      $accepted_args   The number of arguments the function accepts.
 		 */
 		public function add_filter( $tag, $function_to_add, $priority, $accepted_args ) {
-			$stop_id = _wp_filter_build_unique_id( $this->hook_name, $this->stop_cb, $priority );
+			$idx = _wp_filter_build_unique_id( $tag, $function_to_add, $priority );
 
-			if ( ( is_array( $function_to_add ) && $function_to_add[0] instanceof CollectorInterface ) || $this->collector->is_function_ignored( $function_to_add ) ) {
-				return $this->hook->add_filter( $tag, $function_to_add, $priority, $accepted_args );
+			$priority_existed = isset( $this->callbacks[ $priority ] );
+
+			$this->callbacks[ $priority ][ $idx ] = array(
+				'function'      => $function_to_add,
+				'accepted_args' => $accepted_args,
+			);
+
+			// if we're adding a new priority to the list, put them back in sorted order
+			if ( ! $priority_existed && count( $this->callbacks ) > 1 ) {
+				ksort( $this->callbacks, SORT_NUMERIC );
 			}
 
-			$callbacks = &$this->hook->callbacks[ $priority ];
-
-			$this->hook->add_filter( $tag, $function_to_add, $priority, $accepted_args );
-			$this->append_array_unique( $callbacks, $stop_id, $this->get_stop_cb_wrapper() );
-
-			return true;
+			if ( $this->nesting_level > 0 ) {
+				$this->resort_active_iterations( $priority, $priority_existed );
+			}
 		}
 
 		/**
-		 * @param string   $tag
-		 * @param callable $function_to_remove
-		 * @param int      $priority
+		 * Handles resetting callback priority keys mid-iteration.
 		 *
-		 * @return bool
-		 * @noinspection PhpUnused
+		 * @param bool|int $new_priority     Optional. The priority of the new filter being added. Default false,
+		 *                                   for no priority being added.
+		 * @param bool     $priority_existed Optional. Flag for whether the priority already existed before the new
+		 *                                   filter was added. Default false.
 		 */
-		public function remove_filter( $tag, $function_to_remove, $priority ) {
-			if ( ( is_array( $function_to_remove ) && $function_to_remove[0] instanceof CollectorInterface ) || $this->collector->is_function_ignored( $function_to_remove ) ) {
-				return $this->hook->remove_filter( $tag, $function_to_remove, $priority );
-			}
+		private function resort_active_iterations( $new_priority = false, $priority_existed = false ) {
+			$new_priorities = array_keys( $this->callbacks );
 
-			if ( $this->hook->has_filter( $tag, $function_to_remove ) ) {
-				$callbacks = &$this->hook->callbacks[ $priority ];
-				$current   = key( $callbacks );
-
-				$keys          = array_keys( $callbacks );
-				$indexes       = array_flip( $keys );
-				$current_index = $indexes[ $current ];
-
-				$function_key       = _wp_filter_build_unique_id( $tag, $function_to_remove, $priority );
-				$function_index     = $indexes[ $function_key ];
-				$start_function_key = $keys[ $function_index - 1 ];
-				$stop_function_key  = $keys[ $function_index + 1 ];
-
-				$this->hook->remove_filter( $tag, $function_to_remove, $priority );
-				unset( $callbacks[ $start_function_key ], $callbacks[ $stop_function_key ] );
-
-				if ( $function_index < $current_index ) {
-					reset( $callbacks );
-					do {
-						next( $callbacks );
-					} while ( $indexes[ key( $callbacks ) ] < $function_index );
+			// If there are no remaining hooks, clear out all running iterations.
+			if ( ! $new_priorities ) {
+				foreach ( $this->iterations as $index => $iteration ) {
+					$this->iterations[ $index ] = $new_priorities;
 				}
 
-				return true;
+				return;
+			}
+
+			$min = min( $new_priorities );
+			foreach ( $this->iterations as $index => &$iteration ) {
+				$current = current( $iteration );
+				// If we're already at the end of this iteration, just leave the array pointer where it is.
+				if ( false === $current ) {
+					continue;
+				}
+
+				$iteration = $new_priorities;
+
+				if ( $current < $min ) {
+					array_unshift( $iteration, $current );
+					continue;
+				}
+
+				while ( current( $iteration ) < $current ) {
+					if ( false === next( $iteration ) ) {
+						break;
+					}
+				}
+
+				// If we have a new priority that didn't exist, but ::apply_filters() or ::do_action() thinks it's the current priority...
+				if ( $new_priority === $this->current_priority[ $index ] && ! $priority_existed ) {
+					/*
+					 * ... and the new priority is the same as what $this->iterations thinks is the previous
+					 * priority, we need to move back to it.
+					 */
+
+					if ( false === current( $iteration ) ) {
+						// If we've already moved off the end of the array, go back to the last element.
+						$prev = end( $iteration );
+					} else {
+						// Otherwise, just go back to the previous element.
+						$prev = prev( $iteration );
+					}
+					if ( false === $prev ) {
+						// Start of the array. Reset, and go about our day.
+						reset( $iteration );
+					} elseif ( $new_priority !== $prev ) {
+						// Previous wasn't the same. Move forward again.
+						next( $iteration );
+					}
+				}
+			}
+			unset( $iteration );
+		}
+
+		/**
+		 * Unhooks a function or method from a specific filter action.
+		 *
+		 * @param string   $tag                The filter hook to which the function to be removed is hooked.
+		 * @param callable $function_to_remove The callback to be removed from running when the filter is applied.
+		 * @param int      $priority           The exact priority used when adding the original filter callback.
+		 *
+		 * @return bool Whether the callback existed before it was removed.
+		 */
+		public function remove_filter( $tag, $function_to_remove, $priority ) {
+			$function_key = _wp_filter_build_unique_id( $tag, $function_to_remove, $priority );
+
+			$exists = isset( $this->callbacks[ $priority ][ $function_key ] );
+			if ( $exists ) {
+				unset( $this->callbacks[ $priority ][ $function_key ] );
+				if ( ! $this->callbacks[ $priority ] ) {
+					unset( $this->callbacks[ $priority ] );
+					if ( $this->nesting_level > 0 ) {
+						$this->resort_active_iterations();
+					}
+				}
+			}
+
+			return $exists;
+		}
+
+		/**
+		 * Checks if a specific action has been registered for this hook.
+		 *
+		 * @param string        $tag               Optional. The name of the filter hook. Default empty.
+		 * @param callable|bool $function_to_check Optional. The callback to check for. Default false.
+		 *
+		 * @return bool|int The priority of that hook is returned, or false if the function is not attached.
+		 */
+		public function has_filter( $tag = '', $function_to_check = false ) {
+			if ( false === $function_to_check ) {
+				return $this->has_filters();
+			}
+
+			$function_key = _wp_filter_build_unique_id( $tag, $function_to_check, false );
+			if ( ! $function_key ) {
+				return false;
+			}
+
+			foreach ( $this->callbacks as $priority => $callbacks ) {
+				if ( isset( $callbacks[ $function_key ] ) ) {
+					return $priority;
+				}
 			}
 
 			return false;
 		}
 
 		/**
+		 * Checks if any callbacks have been registered for this hook.
 		 *
+		 * @return bool True if callbacks have been registered for the current hook, otherwise false.
 		 */
-		public function remove_function_hooks() {
-			$callbacks = &$this->hook->callbacks;
+		public function has_filters() {
+			foreach ( $this->callbacks as $callbacks ) {
+				if ( $callbacks ) {
+					return true;
+				}
+			}
 
-			foreach ( array_keys( $callbacks ) as $priority ) {
-				$callbacks[ $priority ] = array_filter( $callbacks[ $priority ], static function ( $function ) {
-					return ! ( is_array( $function['function'] ) && $function['function'][0] instanceof self );
-				} );
+			return false;
+		}
+
+		/**
+		 * Removes all callbacks from the current filter.
+		 *
+		 * @param int|bool $priority Optional. The priority number to remove. Default false.
+		 */
+		public function remove_all_filters( $priority = false ) {
+			if ( ! $this->callbacks ) {
+				return;
+			}
+
+			if ( false === $priority ) {
+				$this->callbacks = array();
+			} elseif ( isset( $this->callbacks[ $priority ] ) ) {
+				unset( $this->callbacks[ $priority ] );
+			}
+
+			if ( $this->nesting_level > 0 ) {
+				$this->resort_active_iterations();
 			}
 		}
+
+		/**
+		 * Calls the callback functions that have been added to an action hook.
+		 *
+		 * @param array $args Parameters to pass to the callback functions.
+		 */
+		public function do_action( $args ) {
+			$this->doing_action = true;
+			$this->apply_filters( '', $args );
+
+			// If there are recursive calls to the current action, we haven't finished it until we get to the last one.
+			if ( ! $this->nesting_level ) {
+				$this->doing_action = false;
+			}
+		}
+
+		/**
+		 * Calls the callback functions that have been added to a filter hook.
+		 *
+		 * @param mixed $value The value to filter.
+		 * @param array $args  Additional parameters to pass to the callback functions.
+		 *                     This array is expected to include $value at index 0.
+		 *
+		 * @return mixed The filtered value after all hooked functions are applied to it.
+		 */
+		public function apply_filters( $value, $args ) {
+			if ( ! $this->callbacks ) {
+				return $value;
+			}
+
+			$nesting_level = $this->nesting_level ++;
+
+			$this->iterations[ $nesting_level ] = array_keys( $this->callbacks );
+			$num_args                           = count( $args );
+
+			do {
+				$this->current_priority[ $nesting_level ] = current( $this->iterations[ $nesting_level ] );
+				$priority                                 = $this->current_priority[ $nesting_level ];
+
+				foreach ( $this->callbacks[ $priority ] as $the_ ) {
+					if ( ! $this->doing_action ) {
+						$args[0] = $value;
+					}
+					if ( ! $this->collector->is_function_ignored( $the_['function'] ) ) {
+						$this->collector->start_timer( $the_['function'] );
+					}
+					// Avoid the array_slice if possible.
+					if ( $the_['accepted_args'] == 0 ) {
+						$value = call_user_func( $the_['function'] );
+					} elseif ( $the_['accepted_args'] >= $num_args ) {
+						$value = call_user_func_array( $the_['function'], $args );
+					} else {
+						$value = call_user_func_array( $the_['function'], array_slice( $args, 0, (int) $the_['accepted_args'] ) );
+					}
+					if ( ! $this->collector->is_function_ignored( $the_['function'] ) ) {
+						$this->collector->stop_timer( $the_['function'] );
+					}
+				}
+			} while ( false !== next( $this->iterations[ $nesting_level ] ) );
+
+			unset( $this->iterations[ $nesting_level ] );
+			unset( $this->current_priority[ $nesting_level ] );
+
+			$this->nesting_level --;
+
+			return $value;
+		}
+
+		/**
+		 * Processes the functions hooked into the 'all' hook.
+		 *
+		 * @param array $args Arguments to pass to the hook callbacks. Passed by reference.
+		 */
+		public function do_all_hook( &$args ) {
+			$nesting_level                      = $this->nesting_level ++;
+			$this->iterations[ $nesting_level ] = array_keys( $this->callbacks );
+
+			do {
+				$priority = current( $this->iterations[ $nesting_level ] );
+				foreach ( $this->callbacks[ $priority ] as $the_ ) {
+					call_user_func_array( $the_['function'], $args );
+				}
+			} while ( false !== next( $this->iterations[ $nesting_level ] ) );
+
+			unset( $this->iterations[ $nesting_level ] );
+			$this->nesting_level --;
+		}
+
+		/**
+		 * Return the current priority level of the currently running iteration of the hook.
+		 *
+		 * @return int|false If the hook is running, return the current priority level. If it isn't running, return false.
+		 */
+		public function current_priority() {
+			if ( false === current( $this->iterations ) ) {
+				return false;
+			}
+
+			return current( current( $this->iterations ) );
+		}
+
+		/**
+		 * Determines whether an offset value exists.
+		 *
+		 * @link https://secure.php.net/manual/en/arrayaccess.offsetexists.php
+		 *
+		 * @param mixed $offset An offset to check for.
+		 *
+		 * @return bool True if the offset exists, false otherwise.
+		 */
+		public function offsetExists( $offset ) {
+			return isset( $this->callbacks[ $offset ] );
+		}
+
+		/**
+		 * Retrieves a value at a specified offset.
+		 *
+		 * @link https://secure.php.net/manual/en/arrayaccess.offsetget.php
+		 *
+		 * @param mixed $offset The offset to retrieve.
+		 *
+		 * @return mixed If set, the value at the specified offset, null otherwise.
+		 */
+		public function offsetGet( $offset ) {
+			return isset( $this->callbacks[ $offset ] ) ? $this->callbacks[ $offset ] : null;
+		}
+
+		/**
+		 * Sets a value at a specified offset.
+		 *
+		 * @link https://secure.php.net/manual/en/arrayaccess.offsetset.php
+		 *
+		 * @param mixed $offset The offset to assign the value to.
+		 * @param mixed $value  The value to set.
+		 */
+		public function offsetSet( $offset, $value ) {
+			if ( is_null( $offset ) ) {
+				$this->callbacks[] = $value;
+			} else {
+				$this->callbacks[ $offset ] = $value;
+			}
+		}
+
+		/**
+		 * Unsets a specified offset.
+		 *
+		 * @link https://secure.php.net/manual/en/arrayaccess.offsetunset.php
+		 *
+		 * @param mixed $offset The offset to unset.
+		 */
+		public function offsetUnset( $offset ) {
+			unset( $this->callbacks[ $offset ] );
+		}
+
+		/**
+		 * Returns the current element.
+		 *
+		 * @link https://secure.php.net/manual/en/iterator.current.php
+		 *
+		 * @return array Of callbacks at current priority.
+		 */
+		public function current() {
+			return current( $this->callbacks );
+		}
+
+		/**
+		 * Moves forward to the next element.
+		 *
+		 * @link https://secure.php.net/manual/en/iterator.next.php
+		 *
+		 * @return array Of callbacks at next priority.
+		 */
+		public function next() {
+			return next( $this->callbacks );
+		}
+
+		/**
+		 * Returns the key of the current element.
+		 *
+		 * @link https://secure.php.net/manual/en/iterator.key.php
+		 *
+		 * @return mixed Returns current priority on success, or NULL on failure
+		 */
+		public function key() {
+			return key( $this->callbacks );
+		}
+
+		/**
+		 * Checks if current position is valid.
+		 *
+		 * @link https://secure.php.net/manual/en/iterator.valid.php
+		 *
+		 * @return boolean
+		 */
+		public function valid() {
+			return key( $this->callbacks ) !== null;
+		}
+
+		/**
+		 * Rewinds the Iterator to the first element.
+		 *
+		 * @link https://secure.php.net/manual/en/iterator.rewind.php
+		 */
+		public function rewind() {
+			reset( $this->callbacks );
+		}
+
 	}
 }
 
 namespace WPProfiler\Core\Collectors {
 
+	use ReflectionException;
 	use ReflectionFunction;
 	use ReflectionMethod;
 	use WPProfiler\Core;
@@ -1070,9 +1078,6 @@ namespace WPProfiler\Core\Collectors {
 			if ( ! has_action( $action ) || $this->is_hook_ignored( $action ) || ! $this->enabled ) {
 				return;
 			}
-
-			$this->profiler->call_collector( Function_::NAME, 'maybe_inject_hook', $action );
-			$this->profiler->call_collector( Function_::NAME, 'inject_timers', $action );
 
 			$this->current_hook['children'][] = $this->record();
 			$this->maybe_change_current_hook();
@@ -1253,12 +1258,17 @@ namespace WPProfiler\Core\Collectors {
 		 */
 		private $ignored_functions = [];
 
+
+		private $skip = [];
+
+		private $ignoring_enabled = false;
+
 		/**
 		 * @return void
 		 */
 		public function init() {
 			parent::init();
-			$this->current_hook = $this->profiler->call_collector( Hook::NAME, 'get_current_hook' );
+			add_action( 'all', [ $this, 'maybe_inject_hook' ] );
 		}
 
 		/**
@@ -1275,7 +1285,11 @@ namespace WPProfiler\Core\Collectors {
 			parent::enable();
 			if ( ! $this->profiler->is_collector_enabled( Hook::NAME ) ) {
 				$this->profiler->disable_collector( self::NAME );
+
+				return;
 			}
+
+			$GLOBALS['wp_filter'] = Core\Hook::build_preinitialized_hooks( $GLOBALS['wp_filter'] );
 		}
 
 		/**
@@ -1327,14 +1341,20 @@ namespace WPProfiler\Core\Collectors {
 		 * @throws \ReflectionException
 		 */
 		public function start_timer( $function ) {
-			/** @var callable $function */
-			$function = $function['function'];
-			if ( is_array( $function ) && $function[0] === $this ) {
+			if ( is_array( $function ) && $function[0] instanceof Hook ) {
 				return;
 			}
+
+			/** @var callable $function */
 			$data = $this->profiler->create_timer_store();
 			if ( is_array( $function ) ) {
-				$reflect = new ReflectionMethod( $function[0], $function[1] );
+				try {
+					$reflect = new ReflectionMethod( $function[0], $function[1] );
+				} catch ( ReflectionException $e ) {
+					$this->skip [] = true;
+
+					return;
+				}
 				if ( is_object( $function[0] ) ) {
 					$function[0] = get_class( $function[0] );
 				}
@@ -1344,7 +1364,13 @@ namespace WPProfiler\Core\Collectors {
 			}
 			/** @noinspection CallableParameterUseCaseInTypeContextInspection */
 			if ( is_string( $function ) || is_object( $function ) ) {
-				$reflect           = new ReflectionFunction( $function );
+				try {
+					$reflect = new ReflectionFunction( $function );
+				} catch ( ReflectionException $e ) {
+					$this->skip [] = true;
+
+					return;
+				}
 				$data ['file']     = $reflect->getFileName();
 				$data ['line']     = $reflect->getStartLine();
 				$data ['function'] = $reflect->getName();
@@ -1353,39 +1379,46 @@ namespace WPProfiler\Core\Collectors {
 				$data ['function'] = 'UNKNOWN';
 			}
 
-			$current_hook                  = $this->profiler->call_collector( Hook::NAME, 'get_current_hook' );
-			$current_hook  ['functions'][] = $data;
-			if ( $current_hook  ['parent'] ) {
-				$current_hook  ['parent']['children'][ count( $current_hook  ['parent']['children'] ) - 1 ] = $current_hook;
-			}
+			$element = 'functions';
+			$this->profiler->call_collector( Hook::NAME, 'append_current_hook', $element, $data );
+			$this->skip [] = false;
 		}
 
 		/**
 		 *
 		 */
-		public function stop_timer() {
-			$current_hook = $this->profiler->call_collector( Hook::NAME, 'get_current_hook' );
-			end( $current_hook['functions'] );
-			$function = $current_hook['functions'][ key( $current_hook['functions'] ) ];
-			$this->profiler->call_collector( Hook::NAME, 'record_stop', $function );
-		}
-
-		/**
-		 * @param $action
-		 */
-		public function maybe_inject_hook( $action ) {
-			if ( ! ( $GLOBALS['wp_filter'][ $action ] instanceof Core\Hook ) ) {
-				$GLOBALS['wp_filter'][ $action ] = new Core\Hook( $GLOBALS['wp_filter'][ $action ], $action, $this->profiler, $this );
+		public function stop_timer( $function ) {
+			if ( is_array( $function ) && $function[0] instanceof Hook ) {
+				return;
 			}
+			if ( array_pop( $this->skip ) ) {
+				return;
+			}
+			$element  = 'functions';
+			$function = $this->profiler->call_collector( Hook::NAME, 'get_current_hook_last_element', $element );
+			$this->profiler->call_collector( Hook::NAME, 'record_stop', $function );
+			$this->profiler->call_collector( Hook::NAME, 'update_current_hook_last_element', $element, $function );
 		}
 
 		/**
 		 * @param $action
 		 */
-		public function inject_timers( $action ) {
-			/** @var \WPProfiler\Core\Hook $hook */
-			$hook = $GLOBALS['wp_filter'][ $action ];
-			$hook->maybe_inject_function_timer();
+		public function maybe_inject_hook() {
+			$action = current_action();
+			$exists = isset( $GLOBALS['wp_filter'][ $action ] );
+			if ( ! $exists || ! ( $GLOBALS['wp_filter'][ $action ] instanceof Core\Hook ) ) {
+				$hook = new Core\Hook( $action, $this );
+				if ( $exists ) {
+					// Loop through callback groups.
+					foreach ( $GLOBALS['wp_filter'][ $action ] as $priority => $callbacks ) {
+						// Loop through callbacks.
+						foreach ( $callbacks as $cb ) {
+							$hook->add_filter( $action, $cb['function'], $priority, $cb['accepted_args'] );
+						}
+					}
+				}
+				$GLOBALS['wp_filter'][ $action ] = $hook;
+			}
 		}
 
 		/**
@@ -1416,7 +1449,18 @@ namespace WPProfiler\Core\Collectors {
 		 * @return bool
 		 */
 		public function is_function_ignored( $function ) {
-			return isset( $this->ignored_functions[ _wp_filter_build_unique_id( null, $function, null ) ] );
+			return $this->ignoring_enabled && isset( $this->ignored_functions[ _wp_filter_build_unique_id( null, $function, null ) ] );
+		}
+
+		public function get_self() {
+			return $this;
+		}
+
+		/**
+		 * @param bool $ignoring_enabled
+		 */
+		public function set_ignoring_enabled( $ignoring_enabled ) {
+			$this->ignoring_enabled = $ignoring_enabled;
 		}
 	}
 
