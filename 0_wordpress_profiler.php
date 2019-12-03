@@ -430,18 +430,18 @@ namespace WPProfiler\Core {
 			$dir  = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'profiler' . DIRECTORY_SEPARATOR;
 			$type = 'web';
 
-			if ( $data['is_cli'] ) {
+			if ( isset( $data['is_cli'] ) ) {
 				$type = 'cli';
-				if ( $data['wp_cli_command'] ) {
+				if ( isset( $data['wp_cli_command'] ) ) {
 					$type = 'wpcli';
 				}
 			}
 
-			if ( $data['is_cron'] ) {
+			if ( isset( $data['is_cron'] ) ) {
 				$type = 'cron';
 			}
 
-			if ( $data['is_ajax'] ) {
+			if ( isset( $data['is_ajax'] ) ) {
 				$type = 'ajax';
 			}
 			$dir      .= $type;
