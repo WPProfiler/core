@@ -1028,12 +1028,12 @@ namespace WPProfiler\Core\Collectors {
 		/**
 		 *
 		 */
-		private function maybe_change_current_hook() {
+		private function maybe_change_current_hook( $end = false ) {
 			$count = count( $GLOBALS['wp_current_filter'] );
 			if ( $this->level < $count ) {
 				$this->move_down();
 				$this->level ++;
-			} else if ( $this->level >= $count ) {
+			} else if ( ( $this->level > $count ) || ( $this->level === $count && $end ) ) {
 				$this->move_up();
 				$this->level --;
 			}
@@ -1061,7 +1061,7 @@ namespace WPProfiler\Core\Collectors {
 		 */
 		public function stop_timer( $data = null ) {
 			$this->record_end();
-			$this->maybe_change_current_hook();
+			$this->maybe_change_current_hook( true );
 
 			return $data;
 		}
