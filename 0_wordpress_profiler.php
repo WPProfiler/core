@@ -142,7 +142,7 @@ namespace WPProfiler\Core {
 		 *
 		 * @return bool|mixed
 		 */
-		public function call_collector( $name, $method, ...$args ) {
+		public function call_collector( $name, $method, &...$args ) {
 			if ( ! $this->is_collector_enabled( $name ) ) {
 				if ( isset( $args[0] ) ) {
 					return $args[0];
