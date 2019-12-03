@@ -1347,6 +1347,9 @@ namespace WPProfiler\Core\Collectors {
 
 			/** @var callable $function */
 			$data = $this->profiler->create_timer_store();
+			if ( is_string( $function ) && false !== strpos( $function, '::' ) ) {
+				$function = explode( '::', $function );
+			}
 			if ( is_array( $function ) ) {
 				try {
 					$reflect = new ReflectionMethod( $function[0], $function[1] );
