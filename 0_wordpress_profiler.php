@@ -209,7 +209,7 @@ namespace WPProfiler\Core {
 		 *
 		 * @return bool|mixed
 		 */
-		public function call_collector( $name, $method, &...$args ) {
+		public function call_collector( $name, $method, ...$args ) {
 			if ( ! $this->is_collector_enabled( $name ) ) {
 				if ( isset( $args[0] ) ) {
 					return $args[0];
@@ -228,6 +228,18 @@ namespace WPProfiler\Core {
 		 */
 		public function is_collector_enabled( $name ) {
 			return isset( $this->enabled_collectors[ $name ] );
+		}
+
+		public function call_collector_by_ref( $name, $method, &...$args ) {
+			if ( ! $this->is_collector_enabled( $name ) ) {
+				if ( isset( $args[0] ) ) {
+					return $args[0];
+				}
+
+				return false;
+			}
+
+			return $this->collectors[ $name ]->{$method}( ...$args );
 		}
 
 		/**
@@ -1382,8 +1394,7 @@ namespace WPProfiler\Core\Collectors {
 				$data ['function'] = 'UNKNOWN';
 			}
 
-			$element = 'functions';
-			$this->profiler->call_collector( Hook::NAME, 'append_current_hook', $element, $data );
+			$this->profiler->call_collector( Hook::NAME, 'append_current_hook', 'functions', $data );
 			$this->skip [] = false;
 		}
 
@@ -1397,10 +1408,9 @@ namespace WPProfiler\Core\Collectors {
 			if ( array_pop( $this->skip ) ) {
 				return;
 			}
-			$element  = 'functions';
-			$function = $this->profiler->call_collector( Hook::NAME, 'get_current_hook_last_element', $element );
-			$this->profiler->call_collector( Hook::NAME, 'record_stop', $function );
-			$this->profiler->call_collector( Hook::NAME, 'update_current_hook_last_element', $element, $function );
+			$function = $this->profiler->call_collector( Hook::NAME, 'get_current_hook_last_element', 'functions' );
+			$this->profiler->call_collector_by_ref( Hook::NAME, 'record_stop', $function );
+			$this->profiler->call_collector( Hook::NAME, 'update_current_hook_last_element', 'functions', $function );
 		}
 
 		/**
