@@ -9,7 +9,7 @@ A drop-in profiler for WordPress in the form of a MU (Must Use) plugin
 # Instructions
 
 * Place `0_wordpress_profiler.php` in the WordPress installation's `mu-plugins` folder
-* Access the troublesome parts of the site or just let it sit and collect reports. One of the ptohect goals has been to make an unsupervised monitoring system/agent.
+* Access the troublesome parts of the site or just let it sit and collect reports. One of the project goals has been to make an unsupervised monitoring system/agent.
 * Go to the `wp-content` (or where ever you have set the content folder to be)`/profiler` and review the reports
 
 Tip: It is named `0_wordpress_profiler.php` so that the filesystem will ideally return it 1st in a list of files, so please avoid any other mu plugins starting with `0` :). OS configuration files in Linux use the same technique.
