@@ -130,20 +130,6 @@ class MyCollector implements CollectorInterface {
    public function disable() {
       // TODO: Implement disable() method.
    }
-
-   /**
-    * @inheritDoc
-    */
-   public function start() {
-      // TODO: Implement start() method.
-   }
-
-   /**
-    * @inheritDoc
-    */
-   public function stop() {
-      // TODO: Implement stop() method.
-   }
 }
 
 wp_profiler()->register_collector('my_collector', new MyCollector(wp_profiler()));
