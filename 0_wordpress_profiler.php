@@ -57,16 +57,6 @@ namespace WPProfiler\Core {
 		 * @return mixed
 		 */
 		public function disable();
-
-		/**
-		 * @return mixed
-		 */
-		public function start();
-
-		/**
-		 * @return mixed
-		 */
-		public function stop();
 	}
 
 	/**
@@ -1180,21 +1170,6 @@ namespace WPProfiler\Core\Collectors {
 			$this->profiler->disable_collector( Function_::NAME );
 			$this->profiler->disable_collector( FunctionTracer::NAME );
 		}
-
-		/**
-		 * @return mixed|void
-		 */
-		public function start() {
-			// TODO: Implement start() method.
-		}
-
-		/**
-		 * @return mixed|void
-		 */
-		public function stop() {
-			// TODO: Implement stop() method.
-		}
-
 		/**
 		 * @return array
 		 */
@@ -1302,20 +1277,6 @@ namespace WPProfiler\Core\Collectors {
 			}
 
 			$GLOBALS['wp_filter'] = Core\Hook::build_preinitialized_hooks( $GLOBALS['wp_filter'] );
-		}
-
-		/**
-		 * @return mixed|void
-		 */
-		public function start() {
-			// TODO: Implement start() method.
-		}
-
-		/**
-		 * @return mixed|void
-		 */
-		public function stop() {
-			// TODO: Implement stop() method.
 		}
 
 		/**
@@ -1527,20 +1488,6 @@ namespace WPProfiler\Core\Collectors {
 
 			return $data;
 		}
-
-		/**
-		 * @return mixed|void
-		 */
-		public function start() {
-			// TODO: Implement start() method.
-		}
-
-		/**
-		 * @return mixed|void
-		 */
-		public function stop() {
-			// TODO: Implement stop() method.
-		}
 	}
 
 	/**
@@ -1576,20 +1523,6 @@ namespace WPProfiler\Core\Collectors {
 
 			return $meta;
 		}
-
-		/**
-		 * @return mixed|void
-		 */
-		public function start() {
-			// TODO: Implement start() method.
-		}
-
-		/**
-		 * @return mixed|void
-		 */
-		public function stop() {
-			// TODO: Implement stop() method.
-		}
 	}
 
 	/**
@@ -1614,20 +1547,6 @@ namespace WPProfiler\Core\Collectors {
 
 			return $GLOBALS['wp']->query_vars;
 
-		}
-
-		/**
-		 * @return mixed|void
-		 */
-		public function start() {
-			// TODO: Implement start() method.
-		}
-
-		/**
-		 * @return mixed|void
-		 */
-		public function stop() {
-			// TODO: Implement stop() method.
 		}
 	}
 
@@ -1666,20 +1585,6 @@ namespace WPProfiler\Core\Collectors {
 			}
 
 			return $collected;
-		}
-
-		/**
-		 * @return mixed|void
-		 */
-		public function start() {
-			// TODO: Implement start() method.
-		}
-
-		/**
-		 * @return mixed|void
-		 */
-		public function stop() {
-			// TODO: Implement stop() method.
 		}
 	}
 }
