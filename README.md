@@ -22,7 +22,7 @@ The following data for each hook are recorded:
 
 * The hook
 * The time started
-* the time stopped
+* The time stopped
 * The calculated time that was taken
 * The calculated time as a string without scientific notation taken
 * The memory usage when starting
