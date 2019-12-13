@@ -447,6 +447,8 @@ namespace WPProfiler\Core {
 			$filename = apply_filters( 'wp_profiler_reporter_filesystem_reporter_filename', $filename );
 			if ( ! @mkdir( $dir, 0777, true ) && ! @is_dir( $dir ) ) {
 				error_log( sprintf( 'WP Profiler: Could not save report as Directory "%s" could not be created', $dir ) );
+
+				return;
 			}
 			file_put_contents( $dir . DIRECTORY_SEPARATOR . $filename, wp_json_encode( $data, JSON_PRETTY_PRINT ) );
 		}
@@ -1170,6 +1172,7 @@ namespace WPProfiler\Core\Collectors {
 			$this->profiler->disable_collector( Function_::NAME );
 			$this->profiler->disable_collector( FunctionTracer::NAME );
 		}
+
 		/**
 		 * @return array
 		 */
