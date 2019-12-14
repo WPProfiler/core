@@ -450,7 +450,10 @@ namespace WPProfiler\Core {
 
 				return;
 			}
-			file_put_contents( $dir . DIRECTORY_SEPARATOR . $filename, wp_json_encode( $data, JSON_PRETTY_PRINT ) );
+			$path = $dir . DIRECTORY_SEPARATOR . $filename;
+			file_put_contents( $path, wp_json_encode( $data, JSON_PRETTY_PRINT ) );
+
+			do_action( 'wp_profiler_reporter_filesystem_reporter_report_saved', $path );
 		}
 	}
 
