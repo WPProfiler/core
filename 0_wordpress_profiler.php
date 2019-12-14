@@ -312,7 +312,7 @@ namespace WPProfiler\Core {
 				'peak_memory_used' => $peak_memory,
 				'is_cron'          => wp_doing_cron(),
 				'is_ajax'          => wp_doing_ajax(),
-				'is_cli'           => php_sapi_name() === 'cli' ? true : null,
+				'is_cli'           => php_sapi_name() === 'cli',
 				'wp_cli_command'   => class_exists( '\WP_CLI' ) ? (array) implode( ' ', array_map( 'trim', array_filter( array_slice( $_SERVER['argv'], 1 ) ) ) ) : null,
 				'collectors'       => $collected_data,
 				'meta'             => $this->meta,
