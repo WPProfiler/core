@@ -71,7 +71,7 @@ namespace WPProfiler\Core {
 		/**
 		 * Add version identifier
 		 */
-		const VERSION = '0.1.1';
+		const VERSION = '0.1.2';
 
 		/**
 		 * @var \WPProfiler\Core\ReporterInterface
