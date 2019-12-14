@@ -1353,6 +1353,9 @@ namespace WPProfiler\Core\Collectors {
 				$data ['file']     = $reflect->getFileName();
 				$data ['line']     = $reflect->getStartLine();
 				$data ['function'] = $reflect->getName();
+				if ( $function instanceof \Closure ) {
+					$data ['function'] .= '_' . md5( "{$data ['file']}:{$data ['line']}" );
+				}
 			}
 			if ( empty( $data ['function'] ) ) {
 				$data ['function'] = 'UNKNOWN';
